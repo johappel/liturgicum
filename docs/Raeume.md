@@ -1251,9 +1251,9 @@ Dabei gilt:
 ![alt text](../samples/grundbilder/65.png)
 "Digitaler Resonanzraum, Raum der Antwort, im Stil des Master-Screens, hybrides 2D-Screendesign, stiller Hof mit Wasser und Licht oder lichter Baumraum als Übergang zwischen Dunkelheit und Helligkeit, ruhiges Wasserbecken, offene Schale, Baum- oder Astform, leichte Lichtkanten, warme aber zurückhaltende Helligkeit, poetische Materialität, leise Selbstwirksamkeit, hoffnungsvoll ohne Pathos, keine UI, keine Schrift, keine identifizierbaren Personen, Ko-Präsenz höchstens als kaum sichtbarer mittragender Nachhall, 16:9."
 
-### 6.6 Raum der Verdichtung
+### 6.6 Raum der Verdichtung und inneren Sammlung
 ![alt text](../samples/grundbilder/66.png)
-"Digitaler Resonanzraum, Raum der Verdichtung, im Stil des Master-Screens, hybrides 2D-Screendesign, offene nächtliche Weite oder abstrahierte Halle aus Dunkel und Leuchten, mehrschichtige Licht- und Nebelflächen, feine Stern- oder Partikelebenen, ruhige horizontale Raumkanten, atmosphärische Dichte ohne Eventcharakter, gemeinsame Gegenwart nur als Verdichtung von Licht, Klang, Partikeln und schwingenden Schatten, nicht als Gruppe sichtbarer Personen, würdevoll, gesammelt, keine UI, keine Schrift, keine Avatarwirkung, 16:9."
+"Digitaler Resonanzraum, Raum der Verdichtung - inneren Sammlung, im Stil des Master-Screens, hybrides 2D-Screendesign, offene nächtliche Weite oder abstrahierte Halle aus Dunkel und Leuchten, trocken, mehrschichtige Licht- und Nebelflächen, ruhige horizontale Raumkanten, atmosphärische Dichte ohne Eventcharakter, gemeinsame Gegenwart nur als Verdichtung von Licht, Klang, Partikeln und schwingenden Schatten (Silhouetten), nicht als Gruppe sichtbarer Personen, würdevoll, gesammelt, keine UI, keine Schrift, keine Avatarwirkung, 16:9"
 
 ### 6.7 Raum der Berufung / leisen Wirksamkeit
 ![alt text](../samples/grundbilder/67.png)
