@@ -1219,3 +1219,107 @@ Wenn Silhouetten andere Nutzer oder Ko-Präsenz andeuten, ist deshalb besser:
 - keine feste Figur ins Grundbild rendern,
 - sondern nur eine sehr schwache atmosphärische Anlage im Raum zulassen,
 - die eigentliche Präsenz aber erst zur Laufzeit oder als flüchtiger Zusatzlayer erscheinen lassen.
+
+## 6. Grundbild-Prompts für die konkreten liturgischen Orte
+
+Für die nächsten Schritte ist sinnvoll, zuerst für jeden Raum nur das tragende Grundbild zu erzeugen. In diesem Stadium geht es noch nicht um alle Interaktionsobjekte, sondern um Bühne, Licht, Materialität, Tiefenlogik und die richtige Raumstimmung.
+
+Dabei gilt:
+
+- feste Raumstationen dürfen, wenn gewünscht, schon sehr ruhig mitgedacht sein,
+- bewegliche Einzelobjekte noch nicht überbetonen,
+- Nutzerpräsenz nicht als feste Figur ins Bild schreiben,
+- Ko-Präsenz nur als Spur, Nachhall oder flüchtige atmosphärische Möglichkeit andeuten.
+
+### 6.1 Vorhof / Übergang
+![alt text](../samples/grundbilder/61.png)
+"Digitaler Resonanzraum, Vorhof und Übergangsraum, im Stil des Master-Screens, hybrides 2D-Screendesign, stiller sakral offener Schwellenraum zwischen Außenwelt und innerem Raum, nebliger Vorraum mit architektonischer Schwelle oder Torbogen, weiter leerer Übergangsraum, angedeuteter Weg in einen stilleren Innenraum, diffuse Lichtöffnung im Halbdunkel, zarte Pflanzen- und Astsilhouetten, leichte Nebelschichten, viel Leerraum, poetische Materialität aus Stein, Luft, Stoff und Licht, verlangsamend, würdevoll, nicht spielerisch, keine UI, keine Schrift, keine identifizierbaren Personen, keine Avatarwirkung, 16:9."
+
+### 6.2 Raum der Spuren
+![alt text](../samples/grundbilder/62.png)
+"Digitaler Resonanzraum, Raum der Spuren, im Stil des Master-Screens, hybrides 2D-Screendesign, stiller steinerner Hof oder kontemplative Steinlandschaft mit warmen Lichtpunkten und wassernahem Bereich, ruhige Wasserkante mit feinen Kreisen, alte Wand oder Nische mit verblassenden Zeichen, niedrige Steinformen im Vordergrund, leere Sitzformen oder Kerzensilhouetten, atmosphärische Andeutung früherer Anwesenheit als Lichtpunkte, Nachhall oder ferne Spur, nicht als feste Figuren, poetische Materialität, würdevoll, anonym, keine UI, keine Schrift, keine identifizierbaren Personen, 16:9."
+
+### 6.3 Raum des Hörens
+![alt text](../samples/grundbilder/63.png)
+"Digitaler Resonanzraum, Raum des Hörens, im Stil des Master-Screens, hybrides 2D-Screendesign, kreisförmiger oder apsisartiger stiller Innenraum mit ruhigem Zentrum, lichte Rundung oder offene Lichtung, zentrales sanftes Leuchten, Sitzsilhouetten und ruhiger Vordergrundrahmen, viel Stille und Leerraum, schwebende Andeutung von Klang oder Textfläche ohne lesbare Schrift, kontemplativ, gesammelt, sakral offen, keine Predigtästhetik, keine UI, keine identifizierbaren Personen, nur sehr zarte atmosphärische Ko-Präsenz, 16:9."
+
+### 6.4 Raum der Klage
+![alt text](../samples/grundbilder/64.png)
+"Digitaler Resonanzraum, Raum der Klage, im Stil des Master-Screens, hybrides 2D-Screendesign, dunkler offener Wasser- oder Steinraum, regennasse oder verwitterte Materialität, tiefer Dunkelraum mit vereinzeltem verhaltenem Glimmen, schwere Steine im Vordergrund, leere Plätze, gebrochene Kanten, Wind- und Regenschichten, ferne dunkle nicht identifizierbare Silhouetten nur als Auflösung im Raum, nicht als Figuren, schmerzvoll, würdevoll, schwer, ohne Kitsch, ohne Wellness-Anmutung, keine UI, keine Schrift, 16:9."
+
+### 6.5 Raum der Antwort
+![alt text](../samples/grundbilder/65.png)
+"Digitaler Resonanzraum, Raum der Antwort, im Stil des Master-Screens, hybrides 2D-Screendesign, stiller Hof mit Wasser und Licht oder lichter Baumraum als Übergang zwischen Dunkelheit und Helligkeit, ruhiges Wasserbecken, offene Schale, Baum- oder Astform, leichte Lichtkanten, warme aber zurückhaltende Helligkeit, poetische Materialität, leise Selbstwirksamkeit, hoffnungsvoll ohne Pathos, keine UI, keine Schrift, keine identifizierbaren Personen, Ko-Präsenz höchstens als kaum sichtbarer mittragender Nachhall, 16:9."
+
+### 6.6 Raum der Verdichtung
+![alt text](../samples/grundbilder/66.png)
+"Digitaler Resonanzraum, Raum der Verdichtung, im Stil des Master-Screens, hybrides 2D-Screendesign, offene nächtliche Weite oder abstrahierte Halle aus Dunkel und Leuchten, mehrschichtige Licht- und Nebelflächen, feine Stern- oder Partikelebenen, ruhige horizontale Raumkanten, atmosphärische Dichte ohne Eventcharakter, gemeinsame Gegenwart nur als Verdichtung von Licht, Klang, Partikeln und schwingenden Schatten, nicht als Gruppe sichtbarer Personen, würdevoll, gesammelt, keine UI, keine Schrift, keine Avatarwirkung, 16:9."
+
+### 6.7 Raum der Berufung / leisen Wirksamkeit
+![alt text](../samples/grundbilder/67.png)
+"Digitaler Resonanzraum, Raum der Berufung und leisen Wirksamkeit, im Stil des Master-Screens, hybrides 2D-Screendesign, Morgendämmerung oder weiter Horizont, Weg in die Ferne, leicht erhöhter Aussichtspunkt, Landschaft des Aufbruchs ohne heroische Monumentalität, Wegkante, Gräser, Samen oder Zweige, wachsendes warmes Licht, zarter tragender Wind, Weite, Vertrauen und Öffnung, poetisch, würdevoll, keine UI, keine Schrift, keine identifizierbaren Personen, ferne Präsenz nur als kaum hörbarer oder kaum sichtbarer Nachhall, 16:9."
+
+### 6.8 Schwellenraum / Ausgang
+![alt text](../samples/grundbilder/68.png)
+"Digitaler Resonanzraum, Schwellenraum und Ausgang, im Stil des Master-Screens, hybrides 2D-Screendesign, stiller geschützter Ausgangsraum zwischen Innen und Außen, warme Nische mit Laterne, Bank an Wand oder Fenster, gedämpfter Raum mit ruhiger Schreibfläche, sanfte Schatten von Pflanzen oder Stoffen, intimes Licht, Sammlung vor der Rückkehr, vertraulich ohne soziale Bühne, keine Formularanmutung, keine UI, keine Schrift, keine identifizierbaren Personen, 16:9."
+
+### 6.9 Sendung / Rückkehr
+![alt text](../samples/grundbilder/69.png)
+"Digitaler Resonanzraum, Sendung und Rückkehr, im Stil des Master-Screens, hybrides 2D-Screendesign, heller werdender Ausgang oder offenes Fenster zur realen Welt, Wegführung in das Draußen, leichte Außenkonturen, verblassende Innenraumsilhouette, letzte Lichtkante vor dem Alltag, sanft sendende statt abschließende Stimmung, Nachhall statt Pathos, poetische Materialität, keine UI, keine Schrift, keine identifizierbaren Personen, 16:9."
+
+## 7. Ableitungslogik nach den Grundbildern
+
+Wenn die Grundbilder überzeugend sind, sollte nicht sofort alles Weitere gepromptet werden. Sinnvoll ist eine zweite Auswahlstufe pro Raum.
+
+### 7.1 Raumanker ableiten
+
+Pro Raum sollte danach gefragt werden:
+
+- Welche festen Stationen müssen sichtbar im Raum vorhanden sein?
+- Welche davon tragen wirklich liturgische Bedeutung?
+- Welche davon müssen interaktiv adressierbar sein?
+
+Typische Kandidaten:
+
+- Vorhof: Schwelle, Torbogen, Weg, Lichtspalt
+- Spurenraum: Kerzenort, Steinfläche, Wasserkante, kleine Schalen
+- Hörraum: Sitzort, Klangzentrum, Lichtquelle
+- Klageraum: Steinbett, Schale, Wasserort, Klagewand
+- Antwortraum: Schale, Wasser, Baum, Lichtort
+- Verdichtungsraum: Lichtfeld, Wasser- oder Klangzentrum
+- Berufungsraum: Horizontkante, Weg, Öffnung, Lichtort
+- Schwellenraum: Bank, Schreibfläche, Laterne, Tür oder Fenster
+- Sendungsraum: Fenster, Wegkante, Horizontöffnung
+
+### 7.2 Bildliche Interaktionsartefakte ableiten
+
+Danach sollte pro Raum erst die Frage kommen:
+
+- Welche Geste braucht überhaupt ein eigenes Bildobjekt?
+- Welche Wirkung ist nur Laufzeitverhalten?
+- Welche Dinge müssen freigestellt erzeugt werden?
+
+Faustregel:
+
+- Was fest im Raum bleibt: Raumanker
+- Was aufgenommen, getragen, abgelegt oder entzündet wird: Einzelartefakt
+- Was pulsiert, schimmert, weht, kreist oder sich öffnet: Resonanz- oder Laufzeitlayer
+
+Typische Artefaktfelder:
+
+- Kerze: Kerzenkörper als Asset, Flamme als Hybrid-Asset
+- Stein: Steinvarianten als Assets
+- Blatt: Blattgruppe oder einzelne Blätter als Assets
+- Papier: lose und angeheftete Zustände als Assets
+- Lichtgabe: kleiner Lichtimpuls oder Lichtsaum als Hybrid-Asset
+- Wasserreaktion: eher Laufzeitwirkung als Vollbildasset
+
+### 7.3 Praktische Reihenfolge
+
+Die konkrete Arbeitsreihenfolge für die liturgischen Orte ist deshalb:
+
+1. Grundbild-Prompt pro Raum erzeugen
+2. prüfen, welche sichtbaren Raumanker dem Grundbild noch fehlen
+3. nur diese Raumanker ergänzen oder variantisieren
+4. danach die wirklich nötigen Interaktionsartefakte ableiten
+5. Resonanz zuletzt als Hybrid-Asset oder Laufzeitwirkung ergänzen
