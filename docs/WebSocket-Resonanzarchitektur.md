@@ -138,6 +138,78 @@ Beispiel:
 }
 ```
 
+### Ereignisstruktur
+
+Für die Umsetzung sollte ein Resonanzereignis aus klar getrennten Schichten bestehen:
+
+- `gesture`: Was geschieht semantisch?
+- `target`: Worauf wirkt die Geste?
+- `zone`: In welchem groben Bereich des Raums geschieht es?
+- `variant`: Welche symbolische Ausprägung bekommt das Objekt oder die Wirkung?
+- `intensity`: Wie stark prägt das Ereignis den Raum?
+
+Lokal darf der eigene Client zusätzlich mit exakten Punkten arbeiten, etwa für den Ursprung einer Wasserwelle oder die Stelle einer Nebelöffnung.
+
+Diese exakten Punkte gehören aber nicht in das geteilte WebSocket-Protokoll.
+
+Nicht senden:
+
+- pixelgenaue Klickkoordinaten anderer,
+- Cursorpfade,
+- Bewegungsbahnen,
+- dauerhaft verknüpfbare Objektpositionen.
+
+Besser senden:
+
+- Raum,
+- Geste,
+- Zielobjekt,
+- grobe Zone,
+- Intensität,
+- symbolische Variante.
+
+Optionale Render-Hinweise sind möglich, aber nur als schwache Vorschläge für die lokale Darstellung.
+
+Sie dürfen nicht zu einem dauerhaften Figurenmodell werden.
+
+Erlaubt sind zum Beispiel:
+
+- `silhouettePose`: `passing`, `standing`, `seated`, `kneeling`, `reaching`
+- `movementMode`: `still`, `swaying`, `drifting`, `dissolving`
+- `presenceMode`: `brief`, `ambient`, `fading`
+
+Nicht daraus machen:
+
+- langfristig verfolgbaren Figurenzustand,
+- kontinuierliche Körperanimation über das Netzwerk,
+- wiedererkennbare Personendarstellung.
+
+Erweitertes Beispiel:
+
+```json
+{
+  "type": "gesture",
+  "room": "lament",
+  "gesture": "stone_laid",
+  "target": "stone_bed",
+  "zone": "front_left",
+  "intensity": 0.42,
+  "variant": {
+    "size": "large",
+    "shape": "flat",
+    "tone": "slate",
+    "surface": "weathered",
+    "marking": "etched_line"
+  },
+  "renderHint": {
+    "silhouettePose": "kneeling",
+    "movementMode": "dissolving",
+    "presenceMode": "brief"
+  },
+  "clientTime": 1760000000000
+}
+```
+
 Weitere mögliche Gesten:
 
 ```json
@@ -145,7 +217,62 @@ Weitere mögliche Gesten:
   "type": "gesture",
   "room": "traces",
   "gesture": "candle_lit",
-  "intensity": 0.7
+  "target": "candle_cluster",
+  "zone": "rear_right",
+  "intensity": 0.7,
+  "variant": {
+    "height": "short",
+    "waxTone": "ivory",
+    "flameMood": "steady"
+  }
+}
+```
+
+```json
+{
+  "type": "gesture",
+  "room": "response",
+  "gesture": "water_touched",
+  "target": "water_pool",
+  "zone": "center",
+  "intensity": 0.36,
+  "variant": {
+    "rippleScale": "medium",
+    "surfaceTone": "dark_glass",
+    "echo": "soft"
+  }
+}
+```
+
+```json
+{
+  "type": "gesture",
+  "room": "response",
+  "gesture": "leaf_scattered",
+  "target": "bowl",
+  "zone": "front_right",
+  "intensity": 0.28,
+  "variant": {
+    "leafTone": "earth",
+    "amount": "few",
+    "motion": "drift"
+  }
+}
+```
+
+```json
+{
+  "type": "gesture",
+  "room": "threshold",
+  "gesture": "threshold_crossed",
+  "target": "mist_layer",
+  "zone": "center_path",
+  "intensity": 0.22,
+  "variant": {
+    "density": "light",
+    "drift": "slow",
+    "opening": "narrow"
+  }
 }
 ```
 
@@ -162,9 +289,73 @@ Weitere mögliche Gesten:
   "type": "gesture",
   "room": "calling",
   "gesture": "send_light",
+  "target": "horizon_line",
+  "zone": "far_center",
   "intensity": 0.3
 }
 ```
+
+### Variantenlogik für zentrale Zielobjekte
+
+Varianten dürfen symbolische Differenz erzeugen, aber keine Identität transportieren.
+
+#### Stein
+
+Empfohlene Felder:
+
+- `size`: `small`, `medium`, `large`
+- `shape`: `round`, `flat`, `irregular`
+- `tone`: `ash`, `slate`, `earth`, `chalk`
+- `surface`: `smooth`, `rough`, `weathered`
+- `marking`: `none`, `etched_line`, `weathered_sign`, `warm_glow`
+
+Nicht erlauben:
+
+- Klarnamen,
+- freie Gravurtexte,
+- individuelle Widmungen.
+
+#### Kerze
+
+Empfohlene Felder:
+
+- `height`: `short`, `medium`, `tall`
+- `waxTone`: `ivory`, `ash`, `amber`
+- `flameMood`: `steady`, `faint`, `warming`
+- `holder`: `stone`, `metal`, `bare`
+
+Die Kerze soll als Spur wirken, nicht als persönliches Besitzobjekt.
+
+#### Wasser
+
+Empfohlene Felder:
+
+- `rippleScale`: `small`, `medium`, `large`
+- `surfaceTone`: `dark_glass`, `grey_blue`, `ash_reflective`
+- `echo`: `soft`, `deep`, `lingering`
+
+Das Wasser erhält lokal einen exakten Wellenursprung, geteilt wird aber nur Zielobjekt plus Zone.
+
+#### Blatt
+
+Empfohlene Felder:
+
+- `leafTone`: `earth`, `ochre`, `ash_green`
+- `amount`: `single`, `few`, `scatter`
+- `motion`: `drop`, `drift`, `float`
+
+Blätter sollten wie Gabe oder Spur wirken, nicht wie Wurfobjekte.
+
+#### Nebel
+
+Empfohlene Felder:
+
+- `density`: `light`, `medium`, `heavy`
+- `drift`: `slow`, `folding`, `lingering`
+- `opening`: `narrow`, `soft`, `wide`
+
+Nebel ist meist kein eigenständiges Artefakt, sondern ein atmosphärisches Zielobjekt oder eine Raumreaktion.
+Wenn eine Scherenschnittpräsenz eine Nebelbewegung auslöst, sollte deshalb eher `threshold_crossed` oder eine ähnliche Geste gesendet werden als eine „Nebel-Aktion“ einer Person.
 
 ### Server → Client
 
@@ -306,6 +497,9 @@ Beispiel:
 ```txt
 candle_lit: max 3 pro 10 Minuten pro Session
 stone_laid: max 2 pro 10 Minuten pro Session
+water_touched: max 6 pro 5 Minuten pro Session
+leaf_scattered: max 4 pro 10 Minuten pro Session
+threshold_crossed: serverseitig entprellt
 presence dwelling: alle 60 Sekunden
 ```
 
@@ -373,7 +567,16 @@ Ablauf:
   "type": "gesture",
   "room": "lament",
   "gesture": "stone_laid",
-  "intensity": 0.5
+  "target": "stone_bed",
+  "zone": "front_left",
+  "intensity": 0.5,
+  "variant": {
+    "size": "large",
+    "shape": "flat",
+    "tone": "slate",
+    "surface": "weathered",
+    "marking": "etched_line"
+  }
 }
 ```
 
@@ -409,7 +612,7 @@ Eine Person entzündet eine Kerze.
 Ablauf:
 
 1. Kerze erscheint lokal.
-2. WebSocket-Geste wird gesendet.
+2. WebSocket-Geste wird mit Zielobjekt, Zone und Kerzenvariante gesendet.
 3. Andere Clients erhalten ein Resonanzereignis.
 4. Dort erscheint vielleicht nicht dieselbe Kerze, sondern:
    - ein ferner Lichtpunkt,
@@ -423,6 +626,73 @@ Nicht jede Handlung muss eins zu eins gespiegelt werden.
 Besser:
 
 > Handlung wird in Atmosphäre übersetzt.
+
+## 13.1 Beispiel: Raum der Antwort
+
+Eine Person berührt die Wasserfläche.
+
+Ablauf:
+
+1. Lokal entsteht genau am Berührpunkt ein Wasserkreis.
+2. WebSocket sendet kein exaktes `x`/`y`, sondern nur Zielobjekt und grobe Zone.
+3. Andere Clients erhalten daraus eine ferne oder versetzte Wasserreaktion.
+
+Beispiel:
+
+```json
+{
+  "type": "gesture",
+  "room": "response",
+  "gesture": "water_touched",
+  "target": "water_pool",
+  "zone": "center",
+  "intensity": 0.36,
+  "variant": {
+    "rippleScale": "medium",
+    "surfaceTone": "dark_glass",
+    "echo": "soft"
+  }
+}
+```
+
+Erfahrung:
+
+> Jemand hat das Wasser berührt.
+> Ich sehe weder die Hand noch die Person.
+> Aber der Raum antwortet.
+
+## 13.2 Beispiel: Vorhof und Nebel
+
+Eine Person überschreitet die Schwelle.
+
+Ablauf:
+
+1. Lokal weicht der Nebel entlang des eigenen Pfades etwas zurück.
+2. Der WebSocket-Impuls bleibt symbolisch und sendet nur Schwelle, Nebelschicht und grobe Zone.
+3. Andere Clients erleben keine Figur, sondern eine leichte Öffnung im Raum.
+
+Beispiel:
+
+```json
+{
+  "type": "gesture",
+  "room": "threshold",
+  "gesture": "threshold_crossed",
+  "target": "mist_layer",
+  "zone": "center_path",
+  "intensity": 0.22,
+  "variant": {
+    "density": "light",
+    "drift": "slow",
+    "opening": "soft"
+  }
+}
+```
+
+Erfahrung:
+
+> Etwas ist durch den Raum gegangen.
+> Nicht als Figur, sondern als Verschiebung von Luft, Licht und Nebel.
 
 ## 13. Beispiel: Verweilen
 
