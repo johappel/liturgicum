@@ -68,6 +68,68 @@ Nicht verwenden:
 - aggressive UI,
 - gamifizierte Sammlogik.
 
+## 1.1 Raumgrammatik
+
+Die Räume des digitalen Resonanzraums stehen nicht beliebig nebeneinander. Sie bilden eine spürbare Richtung: von kühler Offenheit über schwere Sammlung und Klage zu wachsender Wärme und Öffnung. Diese Grammatik erzeugt Orientierung ohne Karte.
+
+Jeder Raum hat eine definierte Position auf sechs atmosphärischen Achsen. Diese Werte müssen sich in den Bildprompts, in der Klanggestaltung und in der Animationslogik widerspiegeln. Das `generate_prompt.py`-Script liest diese Grammatik aus und baut daraus raumspezifische Prompts.
+
+### Schwellenlogik als einzige Navigation
+
+Jeder Raum hat genau eine Eingangs- und eine Ausgangsschwelle. Der Besucher navigiert nicht durch Wahl, sondern durch Bereitschaft.
+
+Das Ausgangsportal öffnet sich nicht durch Klick oder Countdown, sondern durch atmosphärische Reife: Das Licht wird heller, der Nebel öffnet sich leise. Das ist kein Fortschrittsindikator, sondern ein Angebot.
+
+Das Eingangsportal — der Weg zurück — ist immer räumlich präsent als Teil der Szene. Keine scharfe UI-Kante, kein Button. Eher eine atmosphärische Öffnung, die man gerade hinter sich gelassen hat. Die Möglichkeit der Rückkehr ist räumlich anwesend, ohne aufgedrängt zu werden.
+
+### Kameralogik und Kompositionsregel
+
+Alle Räume teilen denselben Blickpunkt und dieselbe Bildkomposition. Der Master-Screen etabliert diese Regel — jeder weitere Raum übernimmt sie ohne Ausnahme.
+
+**Kamera:** niedriger Blickpunkt auf Boden- oder Stuhlhöhe. Der Betrachter steht unten-vorne im Raum.
+
+**Blickachse:** diagonal von unten-vorne nach oben-hinten in die Szenetiefe. Das ist keine horizontale Querbewegung, sondern eine Tiefenbewegung in die Szene hinein.
+
+**Raumszene / Bühne: Bildmitte bis oben-links.** Hier entfaltet sich das Raumthema. Hier liegen alle Raumanker. Die eigentliche Handlungsfläche des Raums ist nach links-oben gewichtet — das schafft Raum für den Ausgang rechts und lässt die Bühne tief und einladend wirken.
+
+**Eingangsportal: unten-links** — bereits hinter dem Betrachter, schon passiert. Atmosphärische Öffnung im Dunst, keine scharfe Kante. Nicht wie eine Bühnentür von außen gesehen, sondern wie ein Durchgang, den man gerade hinter sich gelassen hat. Die Möglichkeit der Rückkehr ist räumlich präsent — ohne aufgedrängt zu werden.
+
+**Ausgangsportal: oben-rechts** — fern, erhöht, ins Licht führend. Noch geschlossen oder nur schimmernd. Öffnet sich durch Verweilen, nicht durch Klick.
+
+**Parallaxtiefe bestätigt die Blickachse:** Vordergrund unten groß und nah, Mittelgrund kleiner, Hintergrund oben weit und atmosphärisch weich.
+
+### Grammatiktabelle
+
+| Raum | Schwere | Temperatur | Geschwindigkeit | Licht | Klang | Weite |
+|------|---------|------------|-----------------|-------|-------|-------|
+| Vorhof / Übergang | leicht | kühl | verlangsamend | diffus, dämmrig | weit, leer | offen, entgrenzend |
+| Raum der Spuren | leicht–mittel | neutral | langsam | warm, punktuell | verhalten, nachhallend | mittel |
+| Raum des Hörens | leicht | neutral–kühl | still | zentral, sanft | resonant, konzentriert | kreisförmig, gesammelt |
+| Raum der Klage | schwer | kühl, nass | still | gedämpft, glimmend | tief, schwer | eng–mittel, drückend |
+| Raum der Antwort | mittel | warm werdend | langsam öffnend | warm, wachsend | weich, resonant | mittel–weit |
+| Raum der Verdichtung | mittel | neutral–warm | pulsierend still | Nachtlicht, punktuell | dicht, schwingend | weit, atmosphärisch |
+| Raum der Berufung | leicht | warm | öffnend, zart | wachsend, weit | zart, fern | weit–offen |
+| Schwellenraum / Ausgang | leicht | warm | still | intim, schützend | zurückhaltend, nah | eng–intim |
+| Sendung / Rückkehr | leicht | warm–hell | nach außen öffnend | hell, nach außen ziehend | verblassend, Nachhall | offen |
+
+Die Reihe ist keine Treppe mit Ziel, sondern eine Kurve: kühle Öffnung → Sammlung → Verdichtung → Schwere → Lösung → Weite → Intimes → Entlassung.
+
+### Raumanker
+
+Raumanker sind die festen, liturgisch bedeutsamen Stationen eines Raums. Sie müssen in jedem Grundbild-Prompt räumlich verankert sein — keine UI-Elemente, sondern in die Szene eingebaute Orte für Gesten.
+
+| Raum | Raumanker |
+|------|-----------|
+| Vorhof / Übergang | Schwelle oder Torbogen, Weg, Lichtspalt |
+| Raum der Spuren | Kerzenort mit kleinen Schalen, Steinfläche, Wasserkante |
+| Raum des Hörens | Sitzort oder Kreisform, Klangzentrum, zentrale Lichtquelle |
+| Raum der Klage | Steinbett oder Steinablage, Schale, Wasserort, Klagewand |
+| Raum der Antwort | Schale oder Wasserbecken, Baum oder Astform, Lichtort |
+| Raum der Verdichtung | Lichtfeld oder Klangzentrum, Wasser- oder Resonanzfläche |
+| Raum der Berufung | Lichtzentrum oder zugewandte Lichtquelle, Erhöhter leerer Ort oder Sitznische, Symbolische Öffnung als Ansprache |
+| Schwellenraum / Ausgang | Bank oder Sitzplatz, Schreibfläche, Laterne, Tür oder Fenster |
+| Sendung / Rückkehr | Offenes Fenster oder Tür, Wegkante oder Schwelle, Horizontöffnung |
+
 ## 2. Räume
 
 ### Vorhof / Übergang
@@ -413,62 +475,53 @@ Der Raum der Verdichtung ist die intensivierte Erfahrung gemeinsamer Gegenwart. 
 
 **Beschreibung**
 
-Dieser Raum macht Sinnhaftigkeit und Antwortfähigkeit erfahrbar. Er ruft nicht zu Leistung auf, sondern öffnet leise in Weltbezug, Vertrauen und Wirksamkeit.
+Der Raum der Berufung ist kein Ort des Aufbruchs, sondern der Ansprache. Hier geschieht das Innehalten vor dem Aufbruch: die Erfahrung, gemeint zu sein, gehört zu werden, nicht bedeutungslos zu sein. Nach Martin Bubers dialogischem Denken: Im Du begegnet das ewige Du. Der Raum hält einen Platz frei — für diese Person, in diesem Moment.
 
 **User-Erfahrung**
 
-- nicht bedeutungslos sein,
-- eine leise Sendung spüren,
-- kein Leistungsdruck, keine Challenge,
-- Vertrauen, Weite und Öffnung,
-- freiwillige Antwortmöglichkeit.
+- gehört werden ohne reden zu müssen,
+- spüren: es gibt einen Platz für mich,
+- gemeint sein ohne Leistungsdruck,
+- stille Berührung statt Aufforderung,
+- innere Aufrichtung ohne Heroismus.
 
 **Wirkung**
 
-- Hoffnung,
-- Vertrauen,
-- innere Aufrichtung,
-- Antwortfähigkeit,
-- Hinwendung zur Welt.
+- Berührung,
+- Gefühltwerden,
+- Ansehen ohne Bewertung,
+- stilles Vertrauen,
+- Bereitschaft zur Antwort — aber noch kein Aufbruch.
 
 **Mögliche Hintergründe**
 
-- Morgendämmerung,
-- offener Horizont,
-- Weg in die Ferne,
-- leicht erhöhter Aussichtspunkt,
-- weiter Himmel mit wachsendem Licht,
-- Landschaft des Aufbruchs ohne heroische Monumentalität.
+- kleine erhöhte Nische oder inneres Heiligtum,
+- warmes gerichtetes Licht von oben oder aus der Raumtiefe,
+- stiller gehaltener Innenraum,
+- kein offener Horizont, sondern eine Zuwendung,
+- Apsis, Kapellenraum oder erhöhte Fläche mit warmem Licht.
 
 **Mögliche Scherenschnitt-Ebenen**
 
-- Wegkante oder Brücke,
-- Gräser, Samen oder Zweige,
-- Horizontlinie,
-- leichter Wind in Tüchern oder Halmen,
-- ferne, kaum hörbare Stimmenpräsenz.
+- ruhige Nischenkante im Vordergrund,
+- Lichtschacht oder Lichöffnung von oben,
+- stille Objektform als Raumanker,
+- feine atmosphärische Präsenz als Nachhall der Verdichtung.
 
 **Mögliche Artefakte**
 
-- Morgendämmerung,
-- offener Horizont,
-- Weg,
-- Wind,
-- wachsendes Licht,
-- ferne Stimmen,
-- Saat,
-- Samen,
-- Keim,
-- Fenster oder Öffnung,
-- kleiner Lichtimpuls.
+- zugewandte Lichtquelle,
+- leerer erhöhter Platz oder Sitznische,
+- symbolische Öffnung (nicht Ausgang, sondern Ansprache),
+- stiller Klangradünkel,
+- Stein oder Schale auf erhöhtem Ort.
 
 **Atmosphärische Reaktionen**
 
-- mehr calling resonance öffnet den Horizont,
-- Licht wird wärmer und weiter,
-- Wind wirkt zarter und tragender,
-- leise Stimmenfragmente bleiben ungreifbar,
-- der Raum soll Vertrauen statt Aktivismus auslösen.
+- Licht wird wärmer je länger man verweilt,
+- kein Horizont öffnet sich — stattdessen verdichtet sich die Zuwendung,
+- Klang bleibt nah und resonant statt weit und fern,
+- der Raum soll berühren statt anspornen.
 
 ### Schwellenraum / Ausgang
 
@@ -1257,7 +1310,7 @@ Dabei gilt:
 
 ### 6.7 Raum der Berufung / leisen Wirksamkeit
 ![alt text](../samples/grundbilder/67.png)
-"Digitaler Resonanzraum, Raum der Berufung und leisen Wirksamkeit, im Stil des Master-Screens, hybrides 2D-Screendesign, Morgendämmerung oder weiter Horizont, Weg in die Ferne, leicht erhöhter Aussichtspunkt, Landschaft des Aufbruchs ohne heroische Monumentalität, Wegkante, Gräser, Samen oder Zweige, wachsendes warmes Licht, zarter tragender Wind, Weite, Vertrauen und Öffnung, poetisch, würdevoll, keine UI, keine Schrift, keine identifizierbaren Personen, ferne Präsenz nur als kaum hörbarer oder kaum sichtbarer Nachhall, 16:9."
+"Digitaler Resonanzraum, Raum der Berufung und leisen Wirksamkeit, im Stil des Master-Screens, hybrides 2D-Screendesign, stiller innerer Raum des Gehörtwerdens, kein Aufbruch sondern Innehalten, kleine erhöhte Nische oder inneres Heiligtum mit warmem gerichtetem Licht von oben oder aus der Raumtiefe, das Licht kommt auf den Betrachter zu nicht auf einen fernen Horizont, erhöhte leere Fläche oder Sitznische als gehaltener Platz, symbolische Resonanzöffnung im Raum, stille atmosphärische Präsenz als Nachhall der Verdichtung, warm, gehalten, nicht heroisch, poetisch, würdevoll, keine UI, keine Schrift, keine identifizierbaren Personen, 16:9."
 
 ### 6.8 Schwellenraum / Ausgang
 ![alt text](../samples/grundbilder/68.png)
@@ -1287,7 +1340,7 @@ Typische Kandidaten:
 - Klageraum: Steinbett, Schale, Wasserort, Klagewand
 - Antwortraum: Schale, Wasser, Baum, Lichtort
 - Verdichtungsraum: Lichtfeld, Wasser- oder Klangzentrum
-- Berufungsraum: Horizontkante, Weg, Öffnung, Lichtort
+- Berufungsraum: Lichtzentrum, erhöhter leerer Ort, symbolische Resonanzöffnung
 - Schwellenraum: Bank, Schreibfläche, Laterne, Tür oder Fenster
 - Sendungsraum: Fenster, Wegkante, Horizontöffnung
 
