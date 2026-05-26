@@ -3,6 +3,8 @@
 
 Diese Datei bündelt aus den Dokumenten unter `docs` alles, was für die visuelle Generierung der Räume relevant ist: Beschreibung, Nutzererfahrung, Wirkung, mögliche Hintergründe, Scherenschnitt-Ebenen und Artefakte.
 
+Die konkrete Choreografie der Raumwechsel steht ergänzend in `docs/Raumuebergaenge.md`. Dort sind alle Übergänge zwischen den Räumen mit visueller, klanglicher und interaktiver Logik ausformuliert.
+
 ## 1. Übergreifende Bildsprache
 
 Der digitale Resonanzraum ist kein Spiel, kein soziales Netzwerk und keine virtuelle Kirche mit Avataren. Die Bilder sollen daher nicht wie Game-Level, Dashboard-Screens oder App-Oberflächen wirken, sondern wie:
