@@ -403,3 +403,144 @@ Empfohlene semantische Eventnamen:
 - Präzision soll atmosphärisch, nicht technisch erlebt werden.
 - Scheitern soll weich, nicht mechanisch sein.
 - Jede Handlung soll würdevoll und nicht spielerisch wirken.
+
+## 11. Verweildauer-Heuristik
+
+Räume reagieren nicht nur auf Gesten, sondern auch auf Aufmerksamkeit. Diese Sektion definiert, wie *Verweilen* zu Raumveränderung wird, ohne als Timer wahrnehmbar zu werden.
+
+### 11.1 Grundsätze
+
+- **Keine Timer-Anzeige, keine Fortschrittsbalken.** Der User soll nicht erfahren, dass eine Schwelle erreicht wurde — er soll merken, dass der Raum reifer geworden ist.
+- **Reife öffnet, nie verlangt.** Erreichte Schwellen ergänzen Möglichkeiten (Resonanz-Anker, Ausgang); sie reduzieren niemals welche.
+- **Pausierbar.** Wer pausiert (Notausstieg-Halt, Tab-Wechsel), verliert keine Reife; die Uhr ruht.
+- **Inaktivität ≠ Abwesenheit.** Stilles Verharren zählt voll als Verweilen; Bewegung beschleunigt Reife nicht.
+- **Keine Belohnung.** Reife produziert keine Items, keinen Score, kein „freigeschaltet".
+
+### 11.2 Zielzeiten pro Raum (Vorschlag, in Phase 4 zu validieren)
+
+| Raum | Untere Schwelle (Eindruck setzt ein) | Mittlere Verweildauer (Raum öffnet sich) | Volle Reife (Ausgang/nächster Raum spürbar) |
+|------|--------------------------------------|------------------------------------------|---------------------------------------------|
+| Vorhof | 15 s | 30 s | 45 s |
+| Spuren | 20 s | 45 s | 90 s |
+| Hören | 30 s | 60 s | 120 s |
+| Klage | 30 s | 75 s | 150 s |
+| Antwort | 20 s | 50 s | 100 s |
+| Verdichtung | 30 s | 90 s | 180 s |
+| Berufung | 20 s | 60 s | 120 s |
+| Schwellenraum | 15 s | 45 s | 90 s |
+| Sendung | 10 s | 30 s | 60 s |
+
+Diese Zielzeiten sind Erwartungswerte für ein „positives Raumerlebnis" — kein Mindestmaß. Wer früher gehen will, kann immer gehen (Notausstieg, Eingangs-Schwelle).
+
+### 11.3 Reife-Stufen Spuren (Referenzimplementierung)
+
+| Zeit ab Eintritt | Atmosphärische Reaktion |
+|------------------|--------------------------|
+| 0–20 s | Grundzustand: Hintergrund, Ambient-Loop, Pointer-Parallax, vorhandene Fremd-Spuren sichtbar |
+| 20 s | Wasserkante reagiert auf Pointer (vorher nicht); Ambient gewinnt eine zusätzliche tiefe Schicht |
+| 45 s | Nebel öffnet sich leicht in der Bühnenzone; weitere Fremd-Spur fadet ein |
+| 90 s | Ausgangs-Schimmer oben-rechts erscheint über 4 s (`easeOutExpo`); ab jetzt tap-bar |
+| +30 s ohne Aktion | sehr leise Glocke aus weiter Ferne (einmalig, nicht wiederholend) |
+
+Die übrigen 8 Räume erhalten in ihrer jeweiligen Aufbauphase eine analoge Tabelle.
+
+### 11.4 Heuristik für „positives Raumerlebnis"
+
+Ein Raumbesuch gilt als gelungen, wenn der User die mittlere Verweildauer überschreitet **und** der Raum auf mindestens eine Geste reagiert hat. Wird dies in Phase 4 (Nutzerfeedback) systematisch unterschritten, ist die Reife-Tabelle zu verkürzen oder die Anker-Affordanz zu verstärken — nicht die Erklärung.
+
+### 11.5 Manifest-Check
+
+- *Vermeidet Plattformlogik?* Ja — keine Timer, keine Belohnung, keine Streaks.
+- *Vertieft Anwesenheit?* Reife belohnt Bleiben mit Tiefe, nicht mit Aktivität.
+- *Schützt Würde?* Frühes Gehen wird nicht sanktioniert; kein „Du hast Raum X nicht ausreichend erlebt".
+- *Anti-Eventisierung?* Reife-Stufen sind raumimmanent, nicht global getaktet.
+
+## 12. Eingabe-Parität und Accessibility
+
+Diese Sektion definiert, wie alle in Abschnitt 2 genannten Eingaben (`tap/press/drag/release/dwell`) über Pointer-, Touch-, Maus- und Tastatur-Eingabe konsistent verfügbar bleiben, und wie der Raum für Menschen ohne volle visuelle oder motorische Voraussetzungen begehbar bleibt.
+
+### 12.1 Pointer-Vereinheitlichung
+
+- **Pointer-Events** (`pointerdown / pointermove / pointerup / pointercancel`) sind die einzige Eingabequelle. Maus, Touch und Pen werden identisch behandelt; keine getrennten Touch-Listener.
+- **Touch-Targets** sind mindestens 44×44 CSS-Pixel groß (WCAG 2.5.5); für Anker mit weicher Hit-Zone (siehe `docs/Design-Artefakte.md` § 11.2) gilt das für die innere Trefferzone.
+- **Drag-Schwelle:** Pointer-Bewegung > 8 px nach Pointer-Down geht in `carry`, sonst zählt der Release als `tap`.
+- **Press-Schwelle:** 150 ms Pointer-Down ohne Bewegung > 4 px geht in `claim`.
+- **Long-Press-Schwelle (Rückübergang):** 1500 ms Pointer-Down im definierten Rückkehr-Bereich (siehe Raum-Spezifikation) löst Rückübergang aus.
+
+### 12.2 Tastatur-Parität
+
+Die App soll auch ohne Pointer-Gerät vollständig erlebbar sein. Die folgende Zuordnung gilt global:
+
+| Tastatur | Pointer-Äquivalent |
+|----------|--------------------|
+| `Tab` / `Shift+Tab` | Pointer-Fokus zum nächsten / vorherigen Raum-Anker bewegen (Reihenfolge folgt Master-Screen-Lesefluss: unten-links → Bühne → oben-rechts) |
+| `Enter` / `Space` (kurz) | `tap` (Reveal + Offer in einem) auf fokussiertem Anker |
+| `Enter` / `Space` (halten) | `press` → `claim`; Loslassen = `offer` |
+| Pfeiltasten während Claim | `carry`-Richtung in Schritten von ~3 % Bildkante pro Tastendruck; Auto-Repeat respektiert |
+| `Esc` | Notausstieg (siehe 12.5) |
+| `Backspace` (halten 1.5 s) | Rückübergang zum vorigen Raum |
+| `M` | Audio mute / unmute |
+| `R` | `prefers-reduced-motion` toggle (Session-lokal) |
+
+Fokus-Indikator: dezenter Lichtsaum am fokussierten Anker (kein dicker Browser-Outline-Ring; Custom-Focus-Stil, aber sichtbar mit ausreichendem Kontrast 3:1).
+
+### 12.3 Reduced Motion
+
+Bei `prefers-reduced-motion: reduce` (oder manuell via `R`):
+
+- Pointer-Parallax aus (statisches Hintergrundbild).
+- Nebel-/Staub-/Blatt-Eigenbewegung auf 25 % der Spawn-Rate, Drift-Geschwindigkeit halbiert.
+- Portal-Übergänge: nur Crossfade von Hintergrund und Ambient, keine choreografierten Phasen.
+- Animation-Dauern < 800 ms halbiert, Dauern ≥ 800 ms bleiben (Würde der Übergänge).
+- Audio bleibt vollständig erhalten; Resonanz-Klänge sind die primäre Rückmeldung.
+
+### 12.4 Audio-Alternative für visuelle Resonanz
+
+Jede primär visuelle Raumantwort hat eine hörbare Entsprechung, damit sie auch ohne Bildschirm-Aufmerksamkeit erfahrbar bleibt:
+
+| Visuelle Resonanz | Audio-Entsprechung |
+|-------------------|---------------------|
+| Wasserkreis | tiefer, weicher Tropfen-Ton mit langem Nachhall |
+| Kerzen-Lichtkreis | warmer, leiser Pad-Anschwellton |
+| Nebelöffnung | sehr leises Luftrauschen, kurz |
+| Ausgangs-Schimmer (Erscheinen) | einmalige ferne Glocke |
+| Fremd-Spur fadet ein | minimaler, sehr distanzierter Ton (kaum als Ereignis erkennbar — bewusst) |
+
+Diese Töne sind im Audio-Mix dauerhaft enthalten, *nicht* als „Accessibility-Modus" zugeschaltet — sie gehören zur Komposition.
+
+### 12.5 Notausstieg
+
+Der Notausstieg ist das **einzige** explizit beschriftete UI-Element und ist Manifest-konform begründet (Sicherheit > Reinheit).
+
+- Position: oben-rechts, kleiner als der Ausgangs-Schimmer, dezent grauer Rand, immer sichtbar.
+- Label: „Raum verlassen" (Klartext, kein Icon-only).
+- Verhalten: Pointer-Tap oder `Esc` schließt die App-Session ohne Rückübergangs-Choreografie (sofortiger Crossfade zu Schwarz, Audio fadet 1.5 s aus, dann leere Seite mit dem Wort „Du bist gegangen.").
+- **Niemals** mit Bestätigungsdialog hinterlegen.
+
+### 12.6 Untertitel & Transkripte
+
+Jeder gesprochene oder gesungene Audio-Impuls (Hörraum, Sendung) hat:
+
+- abrufbare Untertitel (ein-/ausschaltbar in einem kleinen Bedien-Glyph oben-rechts, neben Notausstieg),
+- ein Volltranskript, das *nicht* in den Raum eingeblendet wird, sondern über einen separaten Link „Text zum Lesen" erreichbar ist (öffnet in neuem Tab als reine Textseite — also kein Bruch der Raum-Stimmung).
+
+Reine Klang-/Ambient-Impulse ohne Sprache brauchen keine Untertitel, sondern eine kurze Audiodeskription auf der „Text zum Lesen"-Seite.
+
+### 12.7 Kontrast und Sehbarkeit
+
+- Anker-Affordanzen (Schimmer, Reveal-Lichtkante) sind so abgestimmt, dass sie auch bei `prefers-contrast: more` als Lichtwert mindestens 3:1 zum unmittelbar umgebenden Hintergrund stehen.
+- Der Notausstieg-Beschriftung erfüllt 4.5:1.
+- Kein Information-Through-Color-Only: jede farbliche Reife-Veränderung (z. B. Wasserkante kühler/wärmer) hat zusätzlich eine Bewegungs- oder Klang-Entsprechung.
+
+### 12.8 Pausierbarkeit
+
+- Tab-Wechsel pausiert automatisch: Ambient-Loop fadet auf 0, Partikel/Reife-Uhr stoppen.
+- Rückkehr (`visibilitychange` → visible): Ambient fadet in 2 s wieder ein, Reife-Uhr läuft an dem Punkt weiter, an dem sie gestoppt wurde.
+- Keine Browser-Notifications bei Inaktivität (Manifest).
+
+### 12.9 Manifest-Check
+
+- *Vermeidet Plattformlogik?* Ja — der Notausstieg ist die einzige UI-Beschriftung; alles andere bleibt atmosphärisch.
+- *Würde gewahrt?* Tastatur-Pfad ist gleichwertig, nicht „Behelf"; Audio trägt Resonanz auch ohne Bild.
+- *Anti-Bevormundung?* Pausen werden nicht erklärt; Untertitel sind opt-in.
+- *Schutz vor Überwältigung?* Reduced-Motion und Notausstieg jederzeit erreichbar.

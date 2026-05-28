@@ -1378,3 +1378,72 @@ Die konkrete Arbeitsreihenfolge für die liturgischen Orte ist deshalb:
 3. nur diese Raumanker ergänzen oder variantisieren
 4. danach die wirklich nötigen Interaktionsartefakte ableiten
 5. Resonanz zuletzt als Hybrid-Asset oder Laufzeitwirkung ergänzen
+
+## 8. Animations- und Timing-Grammatik
+
+Diese Sektion definiert die Standard-Zeiten und Easing-Kurven für Raumanimationen, Gesten-Phasen und Portal-Übergänge. Sie ist der numerische Anker für `docs/Interaktions-Spezifikation.md` (Phasen `reveal/claim/carry/offer/resonance`) und für die Implementierung in PixiJS.
+
+Grundsätze:
+
+- **Langsamer als App-üblich.** Standard-Dauern liegen 2–4× über typischen UI-Animationen.
+- **Easing bevorzugt sanft.** `easeOutQuart`, `easeInOutSine`, `easeOutExpo` dominieren; lineare und stark schnappende Kurven (`easeInBack`, `easeOutBounce`) werden vermieden.
+- **Keine Animation unter 200 ms.** Alles darunter wirkt mechanisch.
+- **Maximale Dauern respektieren Verweildauer.** Eine Geste blockiert nie länger als ~3 s; Portalübergänge bis ~10 s.
+- **`prefers-reduced-motion`** halbiert Dauern unterhalb 800 ms und ersetzt Parallax/Drift durch reine Crossfades; Audio bleibt unangetastet.
+
+### 8.1 Gesten-Phasen
+
+| Phase | Dauer (Standard) | Easing | Bemerkung |
+|-------|------------------|--------|-----------|
+| `reveal` | 250–400 ms | `easeOutSine` | beginnt sofort bei Pointer-Annäherung, endet beim ersten Pointer-Down oder beim Verlassen |
+| `claim` | 350–600 ms | `easeOutQuart` | Press-Schwelle 150 ms, danach Übergang in Claim-Animation |
+| `carry` | kontinuierlich | linear mit `easeOutSine` Smoothing | Pointer-Position mit Lag ~80 ms folgen lassen |
+| `offer (valid)` | 600–1200 ms | `easeOutExpo` | inkl. „Einrasten" in Ziel-Zone |
+| `offer (revert)` | 700–900 ms | `easeInOutSine` | sanftes Zurückgleiten, kein Sound |
+| `resonance` | 1500–4000 ms (in 0.4×, hold 0.3×, out 0.3×) | `easeOutSine` in / linear hold / `easeInSine` out | Raumantwort, läuft parallel zum nächsten Pointer-Input |
+
+### 8.2 Portal- und Raumübergänge
+
+Werte gemäß `docs/Raumuebergaenge.md`; hier nur die Easing-Zuordnung.
+
+| Übergang | Gesamtdauer | Phasen (Reife / Schleier / Mitnahme / Ankunft) | Easing pro Phase |
+|----------|-------------|-----------------------------------------------|-------------------|
+| Vorhof → Spuren | 5–6 s | 1.0 / 1.5 / 1.5 / 2.0 s | `easeInOutSine` / `easeOutSine` / linear / `easeOutQuart` |
+| Spuren → Hören | 5–7 s | 1.0 / 2.0 / 1.5 / 2.5 s | `easeInOutSine` / `easeOutSine` / linear / `easeOutQuart` |
+| Hören → Klage | 7–8 s | 1.5 / 2.5 / 1.5 / 2.5 s | `easeInSine` / `easeOutSine` / linear / `easeInOutSine` |
+| Klage → Antwort | 7–8 s | 1.0 / 2.0 / 2.0 / 3.0 s | `easeOutSine` / `easeOutSine` / linear / `easeOutExpo` |
+| Antwort → Verdichtung | 6–8 s | 1.0 / 2.0 / 2.0 / 2.0 s | `easeInOutSine` / `easeOutSine` / linear / `easeOutQuart` |
+| Verdichtung → Berufung | 8–10 s | 1.5 / 2.5 / 2.0 / 4.0 s | `easeOutSine` / `easeOutSine` / linear / `easeOutExpo` |
+| Rückübergang (vorwärts → rückwärts) | +1.5 s vs. Vorwärts | gedämpfte Lautstärke (−6 dB), kein Lichtleuchten | gleiche Kurven, jedoch in invertierter Reihenfolge |
+
+### 8.3 Atmosphäre- und Reife-Schichten
+
+| Schicht | Dauer | Easing | Trigger |
+|---------|-------|--------|---------|
+| Ambient-Crossfade beim Raumwechsel | 3.0–4.0 s | `easeInOutSine` | Phase `Mitnahme` des Übergangs |
+| Parallax-Pointer-Folge | Smoothing ~120 ms | `easeOutSine` (Lag) | kontinuierlich, max. ±15 px |
+| Nebel-Eigenbewegung | Displacement-Loop 12–20 s | sinusoidale Auto-Oszillation | dauerhaft |
+| Verweildauer-Reife-Übergang | 1.5–2.5 s | `easeInOutSine` | bei 20 / 45 / 90 s in Raum (siehe Verweildauer-Heuristik in `Interaktions-Spezifikation.md`) |
+| Ausgangs-Schimmer einblenden | 4.0 s | `easeOutExpo` | bei Erreichen der Reife-Stufe 90 s |
+
+### 8.4 Partikel- und Resonanz-Effekte (prozedurale Bausteine)
+
+| Effekt | Lifetime pro Partikel | Spawn-Rate (Ruhe / max) | Bemerkung |
+|--------|-----------------------|--------------------------|-----------|
+| `FlameEmitter` | 0.6–1.2 s | 12 / 30 pro s | additive Blend, leichte Noise-Modulation |
+| `SmokeEmitter` | 3–6 s | 1 / 4 pro s | sehr großes Alpha-Fade |
+| `FogLayer` | dauerhaft (Loop) | n/a | Displacement-Filter, Pointer-Reaktion max. ±4 % Verschiebung |
+| `DustEmitter` | 4–8 s | 0.5 / 2 pro s | minimale Sichtbarkeit, nahe Lichtquellen |
+| `LeafEmitter` | 4–10 s | 0.2 / 1 pro s | Wind-Feld 0.08 Hz Sinus |
+| `WaterRing` (Welle) | 1.5–2.5 s | n/a (Trigger) | Radius 0 → 25 % Bildbreite, `easeOutSine` |
+| `SilhouettePresence` | 6–12 s (Auftauchen 1–2 s, Wirken 3–8 s, Auflösen 1–3 s) | n/a (Trigger) | Alpha-Verlauf, leichter Drift |
+| Lichtkreis Kerze (Resonance) | 9 s (1.5 in / 3.5 hold / 4.0 out) | n/a | radialer Gradient, Radius ~12 % Bildbreite |
+
+### 8.5 Manifest-Check
+
+- *Vertieft Anwesenheit?* Ja — alle Dauern liegen bewusst über UI-Üblichem; Stille zwischen Phasen erlaubt.
+- *Vermeidet Plattformlogik?* Ja — keine Bounce-/Snap-Effekte, keine sichtbaren Fortschrittsbalken.
+- *Klage-tauglich?* Schwerere Easings (`easeInSine`) bei Klage-Übergängen; keine fröhlichen Kurven.
+- *Reduced-Motion?* Eigene Regel formuliert (halbieren, Parallax aus, Audio voll).
+
+
