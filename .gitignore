@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / Frontend (kommt in Phase 2)
+node_modules/
+app/dist/
+app/.vite/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+
+# Graphify Output (per Lauf neu erzeugt)
+graphify-out/cache/

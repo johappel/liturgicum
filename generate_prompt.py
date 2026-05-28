@@ -9,8 +9,21 @@ Verwendung:
   python generate_prompt.py klage --kurz        → kurzer Prompt für Klageraum
   python generate_prompt.py alle                → alle langen Prompts
   python generate_prompt.py alle --kurz         → alle kurzen Prompts
+
+Asset-Modi (Anker und Artefakte gemäß V2-Regeln aus samples/referenz/prompts.md):
+  python generate_prompt.py spuren --assets           → alle Asset-Schlüssel für Spuren auflisten
+  python generate_prompt.py spuren --asset candle_field   → Prompt für einzelnen Anker
+  python generate_prompt.py spuren --asset candle_unlit   → Prompt für freigestelltes Artefakt
+
+JSON-Ausgabe für imagerouter (gpt-image-2):
+  python generate_prompt.py spuren --json                 → Hintergrund-Prompt als imagerouter-Body
+  python generate_prompt.py spuren --asset stone_bed --json
+Optional:
+  --size <auto|1024x1024|1792x1024|...>  default: auto
+  --quality <auto|low|medium|high>       default: auto
 """
 
+import json
 import sys
 import textwrap
 
@@ -368,8 +381,235 @@ def generate_prompt(raum_id: str, kurz: bool = False) -> str:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CLI
+# Asset-Prompts (Anker und Artefakte, V2-Regeln aus samples/referenz/prompts.md)
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Stabiler Negativ-Block für freigestellte Einzel-Assets.
+ASSET_NEGATIV = (
+    "keine Schrift, keine Labels, keine Überschriften, kein Board, kein Moodboard, "
+    "kein Splitscreen, keine Katalogansicht, keine Collage, keine Produktpräsentation, "
+    "keine mehreren Kategorien in einem Bild, keine UI, keine identifizierbaren Personen"
+)
+
+# Stilanker für Asset-Prompts: derselbe Material-/Lichtcharakter wie der Raum.
+ASSET_STIL_SPUREN = (
+    "derselbe materialreiche kontemplative Stil wie der Raum der Spuren — "
+    "stiller steinerner Hof mit warmen Lichtpunkten, ruhiger Wasserkante, "
+    "verwitterten Steinflächen, weicher Nebeltiefe, poetischer Materialität, "
+    "weiches diffuses Licht, würdevoll, sakral offen, hybrides 2D-Screendesign"
+)
+
+# Die Spuren-Assets gemäß docs/Assets-Spuren.md.
+# Pro Asset:
+#   - `kind`:    "anchor" (sitzt im Raum, nicht freigestellt) | "artifact" (alpha-freigestellt) | "silhouette"
+#   - `name`:    Anzeigename
+#   - `body`:    konkrete Bildbeschreibung (das, was zu sehen sein soll)
+#   - `default_size`: Empfohlene Bildgröße für imagerouter (oder "auto").
+RAUMASSETS: dict[str, dict[str, dict]] = {
+    "spuren": {
+        "background": {
+            "kind": "background",
+            "name": "Hintergrund Spuren (Master-Bühne)",
+            "body": None,  # nutzt generate_prompt("spuren") (langer Raum-Prompt)
+            "default_size": "1792x1024",
+        },
+        "candle_field": {
+            "kind": "anchor",
+            "name": "Anker: Kerzenfeld (leer)",
+            "body": (
+                "eine flache niedrige Steinplatte mit drei bis fünf leeren Kerzenpositionen "
+                "und zwei kleinen flachen Tonschalen daneben, ruhige schwere Form, "
+                "leicht erhöhte Perspektive von vorne-unten, "
+                "auf neutraler Steinplatte und mit ein wenig Bodenkontext aus demselben Raum, "
+                "noch keine Kerze entzündet"
+            ),
+            "default_size": "1024x1024",
+        },
+        "stone_bed": {
+            "kind": "anchor",
+            "name": "Anker: Steinbett",
+            "body": (
+                "eine flache Bodenfläche mit vier bis sechs halb in den Sand oder feuchten Stein "
+                "eingesunkenen dunklen Steinen unterschiedlicher Größe, ruhig verteilt, "
+                "leicht erhöhte Perspektive, weiches diffuses Licht, ohne Beschriftung der Steine"
+            ),
+            "default_size": "1024x1024",
+        },
+        "water_edge": {
+            "kind": "anchor",
+            "name": "Anker: Wasserkante",
+            "body": (
+                "eine ruhige flache Wasseroberfläche an einer Steinkante, "
+                "kaum sichtbare feine Wellenkreise, leichte Reflexionen warmer Lichtpunkte aus dem Raum, "
+                "leicht erhöhte Perspektive, als sichtbare Raumstation gedacht"
+            ),
+            "default_size": "1024x1024",
+        },
+        "candle_unlit": {
+            "kind": "artifact",
+            "name": "Artefakt: Kerze (unangezündet)",
+            "body": (
+                "ein einzelner einfacher weißer Kerzenkörper, ruhige zylindrische Form, "
+                "sauberer Docht, weiches diffuses Licht, poetische Materialität, "
+                "ohne weitere Objekte, ohne Flamme, "
+                "freigestellt auf transparentem Hintergrund — die Flamme entsteht später als Hybrid-Asset"
+            ),
+            "default_size": "1024x1024",
+        },
+        "stone_loose_a": {
+            "kind": "artifact",
+            "name": "Artefakt: loser Stein, Variante A",
+            "body": (
+                "ein einzelner handgroßer dunkler Stein, glatte ruhige Oberfläche, leicht feucht, "
+                "subtile Materialtiefe, weiches Licht, ovale ruhige Grundform, "
+                "freigestellt auf transparentem Hintergrund"
+            ),
+            "default_size": "1024x1024",
+        },
+        "stone_loose_b": {
+            "kind": "artifact",
+            "name": "Artefakt: loser Stein, Variante B",
+            "body": (
+                "ein einzelner handgroßer dunkler Stein, glatte Oberfläche mit feiner Maserung, "
+                "leicht kantigere Grundform als ein einfacher Kiesel, leicht feucht, "
+                "freigestellt auf transparentem Hintergrund"
+            ),
+            "default_size": "1024x1024",
+        },
+        "stone_loose_c": {
+            "kind": "artifact",
+            "name": "Artefakt: loser Stein, Variante C",
+            "body": (
+                "ein einzelner handgroßer dunkler Stein, leicht flachere Grundform, "
+                "warme tiefdunkle Tönung, glatte ruhige Oberfläche, leicht feucht, "
+                "freigestellt auf transparentem Hintergrund"
+            ),
+            "default_size": "1024x1024",
+        },
+        "silhouette_passing": {
+            "kind": "silhouette",
+            "name": "Silhouette: Vorübergehende Figur",
+            "body": (
+                "eine schemenhafte identitätslose menschliche Silhouette im leichten Schritt, "
+                "kein Gesicht, keine harten Konturen, weicher Alpha-Verlauf zu den Rändern, "
+                "dunkler warmer Grauton, würdevoll, kein Avatar, kein Charakter, kein Comic, "
+                "freigestellt auf transparentem Hintergrund"
+            ),
+            "default_size": "1024x1024",
+        },
+        "silhouette_seated": {
+            "kind": "silhouette",
+            "name": "Silhouette: Sitzende Figur",
+            "body": (
+                "eine schemenhafte identitätslose menschliche Silhouette, ruhig sitzend, "
+                "kein Gesicht, keine harten Konturen, weicher Alpha-Verlauf zu den Rändern, "
+                "dunkler warmer Grauton, würdevoll, kein Charakter, "
+                "freigestellt auf transparentem Hintergrund"
+            ),
+            "default_size": "1024x1024",
+        },
+        "silhouette_kneeling": {
+            "kind": "silhouette",
+            "name": "Silhouette: Kniende Figur",
+            "body": (
+                "eine schemenhafte identitätslose menschliche Silhouette, ruhig kniend, "
+                "kein Gesicht, keine harten Konturen, weicher Alpha-Verlauf zu den Rändern, "
+                "dunkler warmer Grauton, würdevoll, kein Charakter, "
+                "freigestellt auf transparentem Hintergrund"
+            ),
+            "default_size": "1024x1024",
+        },
+    },
+}
+
+
+def list_assets(raum_id: str) -> str:
+    if raum_id not in RAUMASSETS:
+        return f"Keine Asset-Definitionen für Raum '{raum_id}'."
+    lines = [f"Assets für Raum '{raum_id}':"]
+    for key, a in RAUMASSETS[raum_id].items():
+        lines.append(f"  {key:<22} [{a['kind']:<10}] {a['name']}")
+    return "\n".join(lines)
+
+
+def generate_asset_prompt(raum_id: str, asset_key: str) -> str:
+    if raum_id not in RAUMASSETS or asset_key not in RAUMASSETS[raum_id]:
+        return f"Unbekanntes Asset: {raum_id}:{asset_key}"
+    asset = RAUMASSETS[raum_id][asset_key]
+
+    if asset["kind"] == "background":
+        # Hintergrund nutzt den vollständigen Raum-Prompt.
+        return generate_prompt(raum_id, kurz=False)
+
+    if asset["kind"] == "anchor":
+        # Ankerobjekt sitzt im Raum, nicht freigestellt.
+        teile = [
+            f"{asset['name']} für den digitalen Resonanzraum",
+            asset["body"],
+            ASSET_STIL_SPUREN,
+            "als sichtbare feste Raumstation gedacht, nicht freigestellt, "
+            "auf neutraler Steinplatte oder direkt im Bodenmaterial des Raums verankert",
+            ASSET_NEGATIV,
+        ]
+        return ", ".join(teile) + "."
+
+    if asset["kind"] == "artifact":
+        # Freigestelltes Einzelobjekt.
+        teile = [
+            f"{asset['name']} für den digitalen Resonanzraum",
+            asset["body"],
+            ASSET_STIL_SPUREN,
+            ASSET_NEGATIV,
+            "Freigestellt!",
+        ]
+        return ", ".join(teile) + "."
+
+    if asset["kind"] == "silhouette":
+        teile = [
+            f"{asset['name']} für den digitalen Resonanzraum",
+            asset["body"],
+            "absichtlich identitätslos, andeutend statt darstellend, "
+            "wird im Code mit animierter Alpha und leichtem Drift in den Raum geblendet",
+            ASSET_NEGATIV,
+            "Freigestellt!",
+        ]
+        return ", ".join(teile) + "."
+
+    return f"Unbekannter Asset-Typ: {asset['kind']}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# imagerouter-JSON
+# ─────────────────────────────────────────────────────────────────────────────
+
+def to_imagerouter_body(
+    prompt: str,
+    size: str = "auto",
+    quality: str = "auto",
+    output_format: str = "png",
+    model: str = "openai/gpt-image-2",
+) -> dict:
+    """
+    Baut den Request-Body für POST https://api.imagerouter.io/v1/openai/images/generations.
+    """
+    return {
+        "prompt": prompt,
+        "model": model,
+        "quality": quality,
+        "size": size,
+        "output_format": output_format,
+    }
+
+
+
+
+def _arg_value(args: list[str], flag: str, default: str | None = None) -> str | None:
+    if flag in args:
+        i = args.index(flag)
+        if i + 1 < len(args):
+            return args[i + 1]
+    return default
+
 
 def main() -> None:
     args = sys.argv[1:]
@@ -379,17 +619,50 @@ def main() -> None:
         for key, r in RAEUME.items():
             print(f"  {key:<14} → {r['name']}")
         print("\nVerwendung:")
-        print("  python generate_prompt.py <raum-id>          langer Prompt")
-        print("  python generate_prompt.py <raum-id> --kurz   kurzer Prompt")
-        print("  python generate_prompt.py alle               alle langen Prompts")
-        print("  python generate_prompt.py alle --kurz        alle kurzen Prompts")
+        print("  python generate_prompt.py <raum-id>                  langer Prompt")
+        print("  python generate_prompt.py <raum-id> --kurz           kurzer Prompt")
+        print("  python generate_prompt.py alle                       alle langen Prompts")
+        print("  python generate_prompt.py alle --kurz                alle kurzen Prompts")
+        print("  python generate_prompt.py <raum-id> --assets         Asset-Liste anzeigen")
+        print("  python generate_prompt.py <raum-id> --asset <key>    Asset-Prompt")
+        print("  python generate_prompt.py <raum-id> [--asset <key>] --json   imagerouter-Body")
+        print("       optionale Flags für --json: --size <auto|WxH>  --quality <auto|low|medium|high>")
         print()
         return
 
     raum_id = args[0].lower()
     kurz = "--kurz" in args
+    as_json = "--json" in args
+    list_only_assets = "--assets" in args
+    asset_key = _arg_value(args, "--asset")
+    size = _arg_value(args, "--size", "auto") or "auto"
+    quality = _arg_value(args, "--quality", "auto") or "auto"
 
     breite = 100
+
+    # --assets: nur Assetliste eines Raums anzeigen
+    if list_only_assets:
+        print()
+        print(list_assets(raum_id))
+        print()
+        return
+
+    # --asset <key>: Asset-Prompt (optional als JSON)
+    if asset_key:
+        prompt_text = generate_asset_prompt(raum_id, asset_key)
+        if prompt_text.startswith("Unbekannt"):
+            print(prompt_text)
+            sys.exit(1)
+        if as_json:
+            asset = RAUMASSETS[raum_id][asset_key]
+            effective_size = size if size != "auto" else asset.get("default_size", "auto")
+            body = to_imagerouter_body(prompt_text, size=effective_size, quality=quality)
+            print(json.dumps(body, ensure_ascii=False, indent=2))
+        else:
+            print()
+            print(textwrap.fill(prompt_text, width=breite))
+            print()
+        return
 
     if raum_id == "alle":
         for key, r in RAEUME.items():
@@ -399,9 +672,15 @@ def main() -> None:
             print(f"{trennlinie}\n")
             print(textwrap.fill(generate_prompt(key, kurz=kurz), width=breite))
             print()
+        return
+
+    prompt_text = generate_prompt(raum_id, kurz=kurz)
+    if as_json:
+        body = to_imagerouter_body(prompt_text, size=size, quality=quality)
+        print(json.dumps(body, ensure_ascii=False, indent=2))
     else:
         print()
-        print(textwrap.fill(generate_prompt(raum_id, kurz=kurz), width=breite))
+        print(textwrap.fill(prompt_text, width=breite))
         print()
 
 

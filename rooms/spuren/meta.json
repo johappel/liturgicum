@@ -1,0 +1,72 @@
+{
+  "background.png": {
+    "source": "manual:reference-set (vor Phase 1)",
+    "asset_key": "background",
+    "kind": "background",
+    "prompt_sha256": null,
+    "rendered_at": "2026-05-28T00:00:00+00:00",
+    "size": "unbekannt (Referenzbild aus rooms/)",
+    "quality": "n/a",
+    "license": "interne Referenz; ggf. in Phase 1.2 durch imagerouter-Render ersetzen"
+  },
+  "anchors/candle_field.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "candle_field",
+    "kind": "anchor",
+    "prompt_sha256": "a216868f620324e679bdedd4f2fd10d5adf404e90acc41ce0319f19f76641586",
+    "rendered_at": "2026-05-28T16:41:36+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "anchors/stone_bed.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "stone_bed",
+    "kind": "anchor",
+    "prompt_sha256": "1cec4d9b3049f6289d475e06ee5f5b0961bfbd74bbaa8c1d6c44f18580562e51",
+    "rendered_at": "2026-05-28T16:42:46+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "anchors/water_edge.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "water_edge",
+    "kind": "anchor",
+    "prompt_sha256": "55069490060b749398288b7722ac6f18c47bcf6218e091516b3e28797fd692ab",
+    "rendered_at": "2026-05-28T16:44:07+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/candle_unlit.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "candle_unlit",
+    "kind": "artifact",
+    "prompt_sha256": "b5051fbdb4691581cbd3081aab21950ce23d6e4f594d9758e7776e2d611d573f",
+    "rendered_at": "2026-05-28T16:44:36+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/stone_loose_a.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "stone_loose_a",
+    "kind": "artifact",
+    "prompt_sha256": "172dca6b38813d183dde38e1abff70204c6bf0930b65078119e020497d20476a",
+    "rendered_at": "2026-05-28T16:45:05+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/stone_loose_b.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "stone_loose_b",
+    "kind": "artifact",
+    "prompt_sha256": "53c4dad4e2cebf37c071edf4c9378f3b2cb260dc234622bb243a07621979caf2",
+    "rendered_at": "2026-05-28T16:45:34+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  }
+}

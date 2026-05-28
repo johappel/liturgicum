@@ -1,0 +1,58 @@
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #050505;
+  color: #c9c2b5;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+.scene-host {
+  position: fixed;
+  inset: 0;
+  display: block;
+}
+
+.scene-host > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+}
+
+/* Notausstieg — einziges Element mit Klartext (Manifest-konform: Sicherheit > Reinheit) */
+.exit-button {
+  position: fixed;
+  top: max(env(safe-area-inset-top), 12px);
+  right: max(env(safe-area-inset-right), 12px);
+  z-index: 10;
+  background: rgba(10, 10, 10, 0.55);
+  color: #c9c2b5;
+  border: 1px solid rgba(201, 194, 181, 0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  opacity: 0.6;
+  transition: opacity 200ms ease;
+}
+
+.exit-button:hover,
+.exit-button:focus-visible {
+  opacity: 1;
+  outline: 1px solid rgba(201, 194, 181, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
