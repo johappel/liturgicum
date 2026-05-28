@@ -10,7 +10,9 @@ const base = process.env.LITURGICUM_BASE ?? "/";
 export default defineConfig({
   base,
   plugins: [react()],
-  publicDir: "public",
+  // Asset-Wurzel: die Repo-weiten Raumdateien unter rooms/ werden
+  // zur Laufzeit unter `${base}<raum>/...` ausgeliefert.
+  publicDir: "../rooms",
   build: {
     outDir: "dist",
     sourcemap: true,

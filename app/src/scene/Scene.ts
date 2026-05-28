@@ -1,4 +1,4 @@
-import { Application, Container } from "pixi.js";
+import { Application, Container, Ticker } from "pixi.js";
 import { LAYER_ORDER, type LayerName, type SceneLayers } from "./types";
 
 /**
@@ -18,6 +18,11 @@ export class Scene implements SceneLayers {
   private host: HTMLElement;
   private resizeObserver?: ResizeObserver;
   private started = false;
+  private tickListeners = new Set<(deltaMs: number) => void>();
+  private boundTick = (ticker: Ticker) => {
+    const dt = ticker.deltaMS;
+    for (const fn of this.tickListeners) fn(dt);
+  };
 
   constructor(host: HTMLElement) {
     this.host = host;
@@ -57,12 +62,22 @@ export class Scene implements SceneLayers {
       this.app.renderer.resize(this.host.clientWidth, this.host.clientHeight);
     });
     this.resizeObserver.observe(this.host);
+
+    this.app.ticker.add(this.boundTick);
+  }
+
+  /** Registriere einen Tick-Callback (Δt in ms). Liefert unsubscribe-Funktion. */
+  onTick(fn: (deltaMs: number) => void): () => void {
+    this.tickListeners.add(fn);
+    return () => this.tickListeners.delete(fn);
   }
 
   destroy(): void {
     if (!this.started) return;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
+    this.tickListeners.clear();
+    this.app.ticker.remove(this.boundTick);
     this.app.destroy(true, { children: true, texture: false });
     this.started = false;
   }

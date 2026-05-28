@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Scene } from "./scene/Scene";
 import { useStore } from "./state/store";
 import { audioEngine } from "./audio/AudioEngine";
+import { SpurenRoom } from "./rooms/SpurenRoom";
 
 /**
  * App-Wurzel.
@@ -18,6 +19,7 @@ export function App() {
     if (!hostRef.current) return;
     const scene = new Scene(hostRef.current);
     sceneRef.current = scene;
+    let room: SpurenRoom | null = null;
 
     // Globale Tastatur-Parität: Esc = Notausstieg.
     const onKey = (e: KeyboardEvent) => {
@@ -25,10 +27,22 @@ export function App() {
     };
     window.addEventListener("keydown", onKey);
 
-    scene.start();
+    (async () => {
+      await scene.start();
+      // Erstunlock für Audio bei erstem Pointerdown (Browser-Policy).
+      const unlock = () => {
+        audioEngine.unlock();
+        window.removeEventListener("pointerdown", unlock);
+      };
+      window.addEventListener("pointerdown", unlock, { once: true });
+
+      room = new SpurenRoom(scene);
+      await room.mount();
+    })();
 
     return () => {
       window.removeEventListener("keydown", onKey);
+      room?.destroy();
       scene.destroy();
       audioEngine.stopAll();
       sceneRef.current = null;

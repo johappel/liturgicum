@@ -68,5 +68,45 @@
     "size": "1024x1024",
     "quality": "auto",
     "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/stone_loose_c.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "stone_loose_c",
+    "kind": "artifact",
+    "prompt_sha256": "277334b50c0dfc42a6912864ab91c12132f73e13b3b643fb0eddfa01d6df19a2",
+    "rendered_at": "2026-05-28T16:46:04+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/silhouette_passing.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "silhouette_passing",
+    "kind": "silhouette",
+    "prompt_sha256": "82f7a3e4d73ecb7cbacdae67552a2537cb35c419aa98672714af7b440d7d89da",
+    "rendered_at": "2026-05-28T16:46:33+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/silhouette_seated.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "silhouette_seated",
+    "kind": "silhouette",
+    "prompt_sha256": "2fc52c0e3a58be9ebf025e454e4d29adcbdd6a99499db0b9d5ab668221899dcd",
+    "rendered_at": "2026-05-28T16:47:02+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
+  },
+  "artifacts/silhouette_kneeling.png": {
+    "source": "imagerouter:openai/gpt-image-2",
+    "asset_key": "silhouette_kneeling",
+    "kind": "silhouette",
+    "prompt_sha256": "13019bfb24bcb5f69dc40f510a203ada7dba60ff8e258e39dcd016ee97265713",
+    "rendered_at": "2026-05-28T16:48:12+00:00",
+    "size": "1024x1024",
+    "quality": "auto",
+    "license": "OpenAI-Output-Terms via imagerouter (eigene Nutzungsrechte, keine CC0)"
   }
 }
