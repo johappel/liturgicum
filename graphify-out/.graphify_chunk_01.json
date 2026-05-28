@@ -1,0 +1,1322 @@
+{
+  "nodes": [
+    {
+      "id": "agents_governance",
+      "label": "Arbeitsregeln für Beiträge",
+      "file_type": "document",
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "agents_negative_rules",
+      "label": "Harte Negativregeln",
+      "file_type": "document",
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "agents_spurenraum_prototyp",
+      "label": "Raum der Spuren als erster Prototyp",
+      "file_type": "document",
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_hybrid_2d_architecture",
+      "label": "Hybride 2D-Erfahrungsarchitektur",
+      "file_type": "document",
+      "source_file": "docs/Design-Artefakte.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_2d_rationale",
+      "label": "Warum 2D, Scherenschnitt und hybride Fläche",
+      "file_type": "document",
+      "source_file": "docs/Design-Artefakte.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "design_symbolic_artifacts",
+      "label": "Symbolische Raumartefakte",
+      "file_type": "document",
+      "source_file": "docs/Design-Artefakte.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "interaction_symbolic_gestures",
+      "label": "Symbolische Raumgesten",
+      "file_type": "document",
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "interaction_phase_grammar",
+      "label": "Interaktionsphasen Reveal Claim Carry Offer Resonance",
+      "file_type": "document",
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "interaction_gesture_event_model",
+      "label": "Gesture-Event-Modell",
+      "file_type": "document",
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "interaction_room_matrix",
+      "label": "Raummatrix der Gesten und Zielzonen",
+      "file_type": "document",
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_resonance_room",
+      "label": "Digitaler Resonanzraum",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_silent_copresence",
+      "label": "Stille Ko-Präsenz",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_liturgical_room_sequence",
+      "label": "Liturgische Raumfolge",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_live_resonance_channel",
+      "label": "Live-Resonanzkanal anderer Anwesender",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_martin_buber",
+      "label": "Martin Bubers dialogisches Denken",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_resonance_theory",
+      "label": "Resonanztheorie",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "konzept_station_liturgy",
+      "label": "Thomasmesse, Kreuzweg und Stationsgottesdienste",
+      "file_type": "document",
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "manifest_digital_sacrality",
+      "label": "Digitale Sakralität als eigene Erfahrungsform",
+      "file_type": "document",
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "manifest_presence_over_visibility",
+      "label": "Anwesenheit statt Sichtbarkeit",
+      "file_type": "document",
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "manifest_anti_platform_logic",
+      "label": "Plattformlogiken vermeiden",
+      "file_type": "document",
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "manifest_return_to_world",
+      "label": "Rückkehr in die Welt",
+      "file_type": "document",
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_room_grammar",
+      "label": "Raumgrammatik",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_threshold_navigation",
+      "label": "Schwellenlogik als Navigation",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_room_anchors",
+      "label": "Raumanker",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_master_screen",
+      "label": "Master-Screen als Stilanker",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_vorhof",
+      "label": "Vorhof oder Übergang",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_spurenraum",
+      "label": "Raum der Spuren",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_hoerraum",
+      "label": "Raum des Hörens",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_klageraum",
+      "label": "Raum der Klage",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_antwortraum",
+      "label": "Raum der Antwort",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_verdichtungsraum",
+      "label": "Raum der Verdichtung",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_berufungsraum",
+      "label": "Raum der Berufung oder leisen Wirksamkeit",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_schwellenraum",
+      "label": "Schwellenraum oder Ausgang",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "raeume_sendungsraum",
+      "label": "Sendung oder Rückkehr",
+      "file_type": "document",
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "transitions_threshold_choreography",
+      "label": "Schwellenchoreografie der Raumübergänge",
+      "file_type": "document",
+      "source_file": "docs/Raumuebergaenge.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "transitions_four_phase_transition",
+      "label": "Vier Phasen des Übergangs",
+      "file_type": "document",
+      "source_file": "docs/Raumuebergaenge.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "transitions_return_logic",
+      "label": "Rückkehrlogik",
+      "file_type": "document",
+      "source_file": "docs/Raumuebergaenge.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_hybrid_browser_stack",
+      "label": "Browserbasierter Hybrid-Stack",
+      "file_type": "document",
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_room_definition_model",
+      "label": "RoomDefinition-Szenenmodell",
+      "file_type": "document",
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_shared_state_model",
+      "label": "Lokaler und flüchtiger gemeinsamer Zustand",
+      "file_type": "document",
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_object_grammar",
+      "label": "Gemeinsame Interaktionsgrammatik für Objekte",
+      "file_type": "document",
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tech_threejs_tradeoff",
+      "label": "Warum nicht primär Three.js",
+      "file_type": "document",
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "plan_phased_prototype",
+      "label": "Phasenmodell des Prototyps",
+      "file_type": "document",
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "plan_websocket_phase",
+      "label": "WebSocket-basierte anonyme Ko-Präsenz als spätere Phase",
+      "file_type": "document",
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "plan_definition_of_done",
+      "label": "Definition of Done",
+      "file_type": "document",
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "websocket_resonance_gateway",
+      "label": "WebSocket-Resonanzarchitektur",
+      "file_type": "document",
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "websocket_ephemeral_symbolic_events",
+      "label": "Flüchtige symbolische Raumereignisse",
+      "file_type": "document",
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "websocket_room_state_values",
+      "label": "Aggregierte Raumzustände",
+      "file_type": "document",
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "websocket_websocket_over_nostr_rationale",
+      "label": "Begründung für WebSocket statt Nostr",
+      "file_type": "document",
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "websocket_rate_limits",
+      "label": "Rate Limits und Missbrauchsschutz",
+      "file_type": "document",
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "websocket_exit_room_separation",
+      "label": "Trennung von Hauptraum und Ausgangsraum",
+      "file_type": "document",
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_review_matrix",
+      "label": "Prüfmatrix auf Basis des liturgischen Manifests",
+      "file_type": "document",
+      "source_file": "docs/TESTS/Kontrollfragen.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_anti_platform_check",
+      "label": "Anti-Plattform-Prüfung",
+      "file_type": "document",
+      "source_file": "docs/TESTS/Kontrollfragen.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "tests_qualitative_user_evaluation",
+      "label": "Qualitative Evaluationsfragen für Nutzertests",
+      "file_type": "document",
+      "source_file": "docs/TESTS/Kontrollfragen.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "agents_governance",
+      "target": "konzept_resonance_room",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_governance",
+      "target": "manifest_digital_sacrality",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_governance",
+      "target": "design_hybrid_2d_architecture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_governance",
+      "target": "tech_hybrid_browser_stack",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_governance",
+      "target": "plan_phased_prototype",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_governance",
+      "target": "websocket_resonance_gateway",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_governance",
+      "target": "tests_review_matrix",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_negative_rules",
+      "target": "manifest_anti_platform_logic",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.93,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_spurenraum_prototyp",
+      "target": "raeume_spurenraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "agents_spurenraum_prototyp",
+      "target": "tests_review_matrix",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/AGENTS.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "design_2d_rationale",
+      "target": "design_hybrid_2d_architecture",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Design-Artefakte.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "design_symbolic_artifacts",
+      "target": "interaction_symbolic_gestures",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.82,
+      "source_file": "docs/Design-Artefakte.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "design_hybrid_2d_architecture",
+      "target": "tech_hybrid_browser_stack",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/Design-Artefakte.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_symbolic_gestures",
+      "target": "konzept_resonance_room",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_symbolic_gestures",
+      "target": "design_hybrid_2d_architecture",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_symbolic_gestures",
+      "target": "tech_hybrid_browser_stack",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_symbolic_gestures",
+      "target": "websocket_resonance_gateway",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_phase_grammar",
+      "target": "design_symbolic_artifacts",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.78,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_phase_grammar",
+      "target": "tech_object_grammar",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.94,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_gesture_event_model",
+      "target": "websocket_ephemeral_symbolic_events",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_room_matrix",
+      "target": "raeume_spurenraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_room_matrix",
+      "target": "raeume_klageraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_room_matrix",
+      "target": "raeume_antwortraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "interaction_room_matrix",
+      "target": "raeume_berufungsraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Interaktions-Spezifikation.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_resonance_room",
+      "target": "manifest_digital_sacrality",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_silent_copresence",
+      "target": "manifest_presence_over_visibility",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.92,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_liturgical_room_sequence",
+      "target": "transitions_threshold_choreography",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.87,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_live_resonance_channel",
+      "target": "websocket_resonance_gateway",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_live_resonance_channel",
+      "target": "websocket_ephemeral_symbolic_events",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.86,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_resonance_room",
+      "target": "konzept_martin_buber",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_resonance_room",
+      "target": "konzept_resonance_theory",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "konzept_resonance_room",
+      "target": "konzept_station_liturgy",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Konzept.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "manifest_anti_platform_logic",
+      "target": "tests_anti_platform_check",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.95,
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "manifest_return_to_world",
+      "target": "raeume_sendungsraum",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "manifest_digital_sacrality",
+      "target": "tests_review_matrix",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.84,
+      "source_file": "docs/Liturgisches-Manifest.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_threshold_navigation",
+      "target": "transitions_threshold_choreography",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_room_grammar",
+      "target": "raeume_room_anchors",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_room_grammar",
+      "target": "raeume_master_screen",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_room_grammar",
+      "target": "transitions_four_phase_transition",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.79,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_berufungsraum",
+      "target": "konzept_martin_buber",
+      "relation": "cites",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_spurenraum",
+      "target": "agents_spurenraum_prototyp",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "raeume_sendungsraum",
+      "target": "manifest_return_to_world",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/Raeume.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "transitions_four_phase_transition",
+      "target": "raeume_threshold_navigation",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.82,
+      "source_file": "docs/Raumuebergaenge.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "transitions_return_logic",
+      "target": "raeume_threshold_navigation",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.76,
+      "source_file": "docs/Raumuebergaenge.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tech_threejs_tradeoff",
+      "target": "tech_hybrid_browser_stack",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tech_hybrid_browser_stack",
+      "target": "websocket_resonance_gateway",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tech_hybrid_browser_stack",
+      "target": "interaction_symbolic_gestures",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tech_room_definition_model",
+      "target": "interaction_room_matrix",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.88,
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tech_shared_state_model",
+      "target": "websocket_room_state_values",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tech_object_grammar",
+      "target": "websocket_ephemeral_symbolic_events",
+      "relation": "shares_data_with",
+      "confidence": "INFERRED",
+      "confidence_score": 0.83,
+      "source_file": "docs/Tech-Stack.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_phased_prototype",
+      "target": "tech_hybrid_browser_stack",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_phased_prototype",
+      "target": "raeume_spurenraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_phased_prototype",
+      "target": "raeume_klageraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_phased_prototype",
+      "target": "raeume_antwortraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_phased_prototype",
+      "target": "raeume_berufungsraum",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_websocket_phase",
+      "target": "websocket_resonance_gateway",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_definition_of_done",
+      "target": "tests_review_matrix",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_definition_of_done",
+      "target": "manifest_digital_sacrality",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "plan_definition_of_done",
+      "target": "raeume_room_grammar",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Technischer-Implementarions-plan.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "websocket_websocket_over_nostr_rationale",
+      "target": "websocket_resonance_gateway",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "websocket_ephemeral_symbolic_events",
+      "target": "websocket_room_state_values",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.78,
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "websocket_resonance_gateway",
+      "target": "tech_shared_state_model",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.84,
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "websocket_exit_room_separation",
+      "target": "tests_review_matrix",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.77,
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "websocket_rate_limits",
+      "target": "websocket_ephemeral_symbolic_events",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.74,
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tests_review_matrix",
+      "target": "manifest_digital_sacrality",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/TESTS/Kontrollfragen.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tests_qualitative_user_evaluation",
+      "target": "konzept_resonance_room",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.79,
+      "source_file": "docs/TESTS/Kontrollfragen.md",
+      "source_location": null,
+      "weight": 1
+    },
+    {
+      "source": "tests_anti_platform_check",
+      "target": "agents_negative_rules",
+      "relation": "semantically_similar_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "docs/TESTS/Kontrollfragen.md",
+      "source_location": null,
+      "weight": 1
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "liturgische_raumfolge",
+      "label": "Liturgische Raumfolge",
+      "nodes": [
+        "raeume_vorhof",
+        "raeume_spurenraum",
+        "raeume_hoerraum",
+        "raeume_klageraum",
+        "raeume_antwortraum",
+        "raeume_verdichtungsraum",
+        "raeume_berufungsraum",
+        "raeume_schwellenraum",
+        "raeume_sendungsraum"
+      ],
+      "relation": "participate_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1,
+      "source_file": "docs/Konzept.md"
+    },
+    {
+      "id": "symbolisches_interaktionsprotokoll",
+      "label": "Symbolisches Interaktionsprotokoll",
+      "nodes": [
+        "interaction_phase_grammar",
+        "interaction_gesture_event_model",
+        "tech_object_grammar",
+        "websocket_ephemeral_symbolic_events",
+        "tech_room_definition_model"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "docs/Interaktions-Spezifikation.md"
+    },
+    {
+      "id": "aggregierte_live_resonanz",
+      "label": "Aggregierte Live-Resonanz",
+      "nodes": [
+        "konzept_live_resonance_channel",
+        "tech_shared_state_model",
+        "websocket_room_state_values",
+        "plan_websocket_phase"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.84,
+      "source_file": "docs/WebSocket-Resonanzarchitektur.md"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}
