@@ -13,6 +13,10 @@ export default defineConfig({
   // Asset-Wurzel: die Repo-weiten Raumdateien unter rooms/ werden
   // zur Laufzeit unter `${base}<raum>/...` ausgeliefert.
   publicDir: "../rooms",
+  // SPA-Fallback deaktivieren, damit fehlende Audio-/Bildpfade einen ehrlichen
+  // 404 statt der index.html als text/html liefern (sonst versucht Howler die
+  // HTML-Antwort als MP3 zu dekodieren und produziert Konsolen-Rauschen).
+  appType: "mpa",
   build: {
     outDir: "dist",
     sourcemap: true,
