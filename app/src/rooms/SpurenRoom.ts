@@ -28,10 +28,13 @@ export class SpurenRoom {
   private detachTick?: () => void;
   private root = new Container();
   private destroyed = false;
+  private gcTimer: number | null = null;
+  private resizeHandler: (() => void) | null = null;
 
   constructor(private scene: Scene) {}
 
   async mount(): Promise<void> {
+    if (this.destroyed || !this.scene.isReady) return;
     const store = useStore.getState();
     store.enterRoom("spuren");
 
@@ -117,6 +120,7 @@ export class SpurenRoom {
       fitBackground();
       fitAnchors();
     };
+    this.resizeHandler = onResize;
     window.addEventListener("resize", onResize);
 
     // Ticker für Effekte + Verweildauer.
@@ -126,15 +130,26 @@ export class SpurenRoom {
     });
 
     // Räume die nicht mehr aktiven Silhouetten/WaterRings auf.
-    setInterval(() => this.gcEffects(), 2000);
+    this.gcTimer = window.setInterval(() => this.gcEffects(), 2000);
   }
 
   destroy(): void {
+    if (this.destroyed) return;
     this.destroyed = true;
+    if (this.gcTimer != null) {
+      window.clearInterval(this.gcTimer);
+      this.gcTimer = null;
+    }
+    if (this.resizeHandler) {
+      window.removeEventListener("resize", this.resizeHandler);
+      this.resizeHandler = null;
+    }
     this.detachTick?.();
-    for (const e of this.effects) e.destroy();
+    for (const e of this.effects) {
+      try { e.destroy(); } catch { /* ignore */ }
+    }
     this.effects = [];
-    this.root.destroy({ children: true });
+    try { this.root.destroy({ children: true }); } catch { /* ignore */ }
   }
 
   private gcEffects(): void {

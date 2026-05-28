@@ -63,7 +63,18 @@ class AudioEngine {
   playOneShot(url: string, intensity = 0.6): void {
     let h = this.oneShots.get(url);
     if (!h) {
-      h = new Howl({ src: [url], loop: false, html5: false });
+      h = new Howl({
+        src: [url],
+        loop: false,
+        html5: false,
+        onloaderror: () => {
+          // Datei (noch) nicht vorhanden -> aus Cache nehmen, still scheitern.
+          this.oneShots.delete(url);
+        },
+        onplayerror: () => {
+          this.oneShots.delete(url);
+        },
+      });
       this.oneShots.set(url, h);
     }
     h.volume(this.effectiveVolume(intensity));
