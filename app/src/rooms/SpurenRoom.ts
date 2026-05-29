@@ -105,9 +105,9 @@ const GROUND_PERSPECTIVE = {
   nearScale: 0.74,
 };
 const PRESENCE_BASE_HEIGHT: Record<PresenceKind, number> = {
-  walking: 320,
-  kneeling: 250,
-  seated: 220,
+  walking: 460,
+  kneeling: 380,
+  seated: 340,
 };
 
 interface HeldItem {
@@ -724,7 +724,7 @@ export class SpurenRoom implements Room {
     const base = randomPointInPoly(zone);
     const start = { x: base.x * W, y: base.y * H };
     const walkTarget = kind === "walking"
-      ? randomNearbyPointInPoly(zone, base, 0.08, this.waterPoly)
+      ? randomNearbyPointInPoly(zone, base, 0.035, this.waterPoly)
       : base;
     const end = { x: walkTarget.x * W, y: walkTarget.y * H };
 
@@ -739,9 +739,9 @@ export class SpurenRoom implements Room {
       kind,
       node,
       ageMs: 0,
-      fadeInMs: 450,
-      holdMs: 1500 + Math.random() * 800,
-      fadeOutMs: 550,
+      fadeInMs: kind === "walking" ? 400 : 450,
+      holdMs: kind === "walking" ? 2200 + Math.random() * 600 : 1500 + Math.random() * 800,
+      fadeOutMs: kind === "walking" ? 650 : 550,
       zone,
       start,
       end,
