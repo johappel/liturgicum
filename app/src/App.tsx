@@ -2,26 +2,23 @@ import { useEffect, useRef } from "react";
 import { Scene } from "./scene/Scene";
 import { useStore } from "./state/store";
 import { audioEngine } from "./audio/AudioEngine";
-import { SpurenRoom } from "./rooms/SpurenRoom";
+import { RoomManager } from "./rooms/RoomManager";
 
 /**
  * App-Wurzel.
  *
- * Zeigt einen Vollbild-Canvas (Pixi) und den Notausstieg (einziges Klartext-UI).
- * Räume und Übergänge werden in Phase 3 in `Scene` orchestriert.
+ * Vollbild-Canvas (Pixi) + Notausstieg-Button (einziges Klartext-UI).
+ * Räume und Übergänge werden vom RoomManager orchestriert.
  */
 export function App() {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<Scene | null>(null);
   const exitRoom = useStore((s) => s.exitRoom);
 
   useEffect(() => {
     if (!hostRef.current) return;
     const scene = new Scene(hostRef.current);
-    sceneRef.current = scene;
-    let room: SpurenRoom | null = null;
+    let manager: RoomManager | null = null;
 
-    // Globale Tastatur-Parität: Esc = Notausstieg.
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") exitRoom();
     };
@@ -29,23 +26,21 @@ export function App() {
 
     (async () => {
       await scene.start();
-      // Erstunlock für Audio bei erstem Pointerdown (Browser-Policy).
       const unlock = () => {
         audioEngine.unlock();
         window.removeEventListener("pointerdown", unlock);
       };
       window.addEventListener("pointerdown", unlock, { once: true });
 
-      room = new SpurenRoom(scene);
-      await room.mount();
+      manager = new RoomManager(scene);
+      await manager.start();
     })();
 
     return () => {
       window.removeEventListener("keydown", onKey);
-      room?.destroy();
+      manager?.destroy();
       scene.destroy();
       audioEngine.stopAll();
-      sceneRef.current = null;
     };
   }, [exitRoom]);
 

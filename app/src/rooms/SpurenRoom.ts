@@ -1,4 +1,4 @@
-import { Assets, Sprite, Texture, Container, type FederatedPointerEvent } from "pixi.js";
+import { Assets, Graphics, Sprite, Texture, type FederatedPointerEvent } from "pixi.js";
 import type { Scene } from "../scene/Scene";
 import { SPUREN_ANCHORS, denormalize, type NormPoint } from "../scene/layout";
 import { SPUREN_ASSETS } from "../assets/manifest";
@@ -9,45 +9,62 @@ import { SmokeEmitter } from "../effects/SmokeEmitter";
 import { FogLayer } from "../effects/FogLayer";
 import { DustEmitter } from "../effects/DustEmitter";
 import { WaterRing } from "../effects/WaterRing";
-import { SilhouettePresence } from "../effects/SilhouettePresence";
 import type { BaseEffect } from "../effects/BaseEffect";
+import { SpurenSimulator } from "./SpurenSimulator";
+import type { Room } from "./Room";
+
+/** Reife-Schwellen aus docs/Interaktions-Spezifikation.md §11. */
+const RIPE_WATER_EDGE_S = 20;
+const RIPE_AMBIENT_S = 45;
+const RIPE_EXIT_S = 90;
+
+/** Halte-Dauer am unteren Rand für Rückkehr nach Vorhof. */
+const BACK_HOLD_MS = 1500;
+
+export interface SpurenRoomCallbacks {
+  /** Vorwärts zum Hörraum (Tap im Lichtleuchten oben-rechts ab 90 s). */
+  onRequestForward?: () => void;
+  /** Zurück nach Vorhof (Halten ~1,5 s am unteren Rand). */
+  onRequestBack?: () => void;
+}
 
 /**
- * SpurenRoom = Komposition des Erprobungsraums "Spuren".
+ * SpurenRoom — Komposition des Erprobungsraums.
  *
- * Lädt Hintergrund + Anker + Artefakte, montiert sie in die Scene-Layer,
- * verdrahtet die zwei aktiven Ankerinteraktionen (Kerzenfeld = tap,
- * Steinbett = drag/release) und startet die Atmosphäre (Nebel, Staub,
- * Silhouetten als lokaler Spuren-Simulator).
- *
- * Bewusst kein UI, kein Text, keine sichtbaren Hit-Marker — die Hit-Zonen
- * sind nur über das Bild andeutbar.
+ * Bild + Anker + Atmosphäre + 5-Phasen-Gesten + Verweildauer-Reife.
+ * Navigation übernimmt der RoomManager über die Callbacks.
  */
-export class SpurenRoom {
+export class SpurenRoom implements Room {
   private effects: BaseEffect[] = [];
   private detachTick?: () => void;
-  private root = new Container();
   private destroyed = false;
   private gcTimer: number | null = null;
   private resizeHandler: (() => void) | null = null;
+  private simulator: SpurenSimulator | null = null;
+  private fog: FogLayer | null = null;
 
-  constructor(private scene: Scene) {}
+  // Reife-Visuals
+  private waterEdgeSprite: Sprite | null = null;
+  private exitGlow: Graphics | null = null;
+  private exitGlowVisible = false;
+  private ambientDenser = false;
+
+  // Back-Hold
+  private backHoldStartedAt: number | null = null;
+  private backHoldFired = false;
+
+  constructor(private scene: Scene, private cb: SpurenRoomCallbacks = {}) {}
 
   async mount(): Promise<void> {
     if (this.destroyed || !this.scene.isReady) return;
     const store = useStore.getState();
     store.enterRoom("spuren");
 
-    // Audio (still scheitern, wenn Datei fehlt).
-    try {
-      audioEngine.crossfadeAmbient(SPUREN_ASSETS.audio.ambient, 2500);
-    } catch {
-      // Phase 1.6 Hand-Off: Pixabay-Audios noch nicht ausgewählt.
-    }
+    try { audioEngine.crossfadeAmbient(SPUREN_ASSETS.audio.ambient, 2500); } catch { /* still */ }
 
     const reduced = store.reducedMotion;
 
-    // Background.
+    // Background
     const bgTex = await Assets.load<Texture>(SPUREN_ASSETS.background);
     if (this.destroyed) return;
     const bg = Sprite.from(bgTex);
@@ -63,9 +80,7 @@ export class SpurenRoom {
     };
     fitBackground();
 
-    // Anker-Sprites (nicht freigestellt, daher als sichtbare Stationen
-    // im Vordergrund über dem Background-Layer; durch Skalierung ~28% der
-    // kürzeren Bildseite verankert).
+    // Anker
     const anchorSprites: Record<string, Sprite> = {};
     for (const [key, src] of Object.entries(SPUREN_ASSETS.anchors)) {
       const tex = await Assets.load<Texture>(src);
@@ -75,6 +90,8 @@ export class SpurenRoom {
       this.scene.layers.anchors.addChild(sp);
       anchorSprites[key] = sp;
     }
+    this.waterEdgeSprite = anchorSprites.water_edge ?? null;
+    if (this.waterEdgeSprite) this.waterEdgeSprite.alpha = 0.4;
 
     const fitAnchors = () => {
       const W = this.scene.width;
@@ -93,12 +110,12 @@ export class SpurenRoom {
     };
     fitAnchors();
 
-    // Atmosphäre.
+    // Atmosphäre
     if (!reduced) {
-      const fog = new FogLayer({ intensity: 0.35 });
-      fog.mount(this.scene.layers.particles_bg);
-      fog.start();
-      this.effects.push(fog);
+      this.fog = new FogLayer({ intensity: 0.35 });
+      this.fog.mount(this.scene.layers.particles_bg);
+      this.fog.start();
+      this.effects.push(this.fog);
 
       const dust = new DustEmitter({ intensity: 0.5 });
       dust.mount(this.scene.layers.particles_fg);
@@ -106,62 +123,137 @@ export class SpurenRoom {
       this.effects.push(dust);
     }
 
-    // Hit-Zonen: Kerzenfeld = tap, Steinbett = drag.
+    // Interaktionen
     this.attachCandleField(anchorSprites.candle_field);
     this.attachStoneBed(anchorSprites.stone_bed);
 
-    // Spuren-Simulator: 4–9 fremde Silhouetten beim Eintritt.
-    if (!reduced) {
-      this.spawnAmbientSilhouettes(4 + Math.floor(Math.random() * 6));
-    }
+    // Lokaler Spuren-Simulator
+    this.simulator = new SpurenSimulator(this.scene, {
+      onEffect: (e) => this.effects.push(e),
+      reducedMotion: reduced,
+    });
+    this.simulator.start();
 
-    // Resize neu-fitten.
+    // Exit-Glow (Lichthof oben-rechts, unsichtbar bis 90 s)
+    this.exitGlow = new Graphics();
+    this.scene.layers.overlay.addChild(this.exitGlow);
+    this.drawExitGlow(0);
+
+    // Stage-Listener für Back-Hold
+    const stage = this.scene.app.stage;
+    stage.eventMode = "static";
+    stage.on("pointerdown", this.onStageDown);
+    stage.on("pointerup", this.onStageUp);
+    stage.on("pointerupoutside", this.onStageUp);
+    stage.on("pointermove", this.onStageMove);
+
+    // Resize
     const onResize = () => {
       fitBackground();
       fitAnchors();
+      this.drawExitGlow(this.exitGlowVisible ? 1 : 0);
     };
     this.resizeHandler = onResize;
     window.addEventListener("resize", onResize);
 
-    // Ticker für Effekte + Verweildauer.
+    // Ticker
     this.detachTick = this.scene.onTick((dt) => {
       for (const e of this.effects) e.tick(dt);
-      useStore.getState().tickDwell(dt / 1000);
+      const s = useStore.getState();
+      s.tickDwell(dt / 1000);
+      this.updateRipeness(s.dwellSeconds);
+      this.checkBackHold();
     });
 
-    // Räume die nicht mehr aktiven Silhouetten/WaterRings auf.
     this.gcTimer = window.setInterval(() => this.gcEffects(), 2000);
   }
 
   destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
-    if (this.gcTimer != null) {
-      window.clearInterval(this.gcTimer);
-      this.gcTimer = null;
-    }
-    if (this.resizeHandler) {
-      window.removeEventListener("resize", this.resizeHandler);
-      this.resizeHandler = null;
-    }
+    if (this.gcTimer != null) { window.clearInterval(this.gcTimer); this.gcTimer = null; }
+    if (this.resizeHandler) { window.removeEventListener("resize", this.resizeHandler); this.resizeHandler = null; }
     this.detachTick?.();
-    for (const e of this.effects) {
-      try { e.destroy(); } catch { /* ignore */ }
-    }
+    try {
+      const stage = this.scene.app.stage;
+      stage.off("pointerdown", this.onStageDown);
+      stage.off("pointerup", this.onStageUp);
+      stage.off("pointerupoutside", this.onStageUp);
+      stage.off("pointermove", this.onStageMove);
+    } catch { /* ignore */ }
+    this.simulator?.destroy();
+    this.simulator = null;
+    for (const e of this.effects) { try { e.destroy(); } catch { /* ignore */ } }
     this.effects = [];
-    try { this.root.destroy({ children: true }); } catch { /* ignore */ }
+    try { this.exitGlow?.destroy(); } catch { /* ignore */ }
+    this.exitGlow = null;
+    this.waterEdgeSprite = null;
+  }
+
+  // ---- 3.6 Verweildauer-Reife ----
+  private updateRipeness(dwell: number): void {
+    if (this.waterEdgeSprite && dwell >= RIPE_WATER_EDGE_S) {
+      this.waterEdgeSprite.alpha = Math.min(1, 0.4 + ((dwell - RIPE_WATER_EDGE_S) / 4) * 0.6);
+    }
+    if (!this.ambientDenser && dwell >= RIPE_AMBIENT_S) {
+      this.ambientDenser = true;
+      this.fog?.setIntensity(0.55);
+    }
+    if (!this.exitGlowVisible && dwell >= RIPE_EXIT_S) {
+      this.exitGlowVisible = true;
+      this.drawExitGlow(1);
+    }
+  }
+
+  private drawExitGlow(alpha: number): void {
+    if (!this.exitGlow) return;
+    const W = this.scene.width;
+    const H = this.scene.height;
+    const p = denormalize(SPUREN_ANCHORS.exit_glow, W, H);
+    const r = Math.min(W, H) * 0.18;
+    this.exitGlow.clear();
+    for (let i = 6; i >= 1; i--) {
+      const ringR = r * (i / 6);
+      const a = alpha * 0.06 * i;
+      this.exitGlow.circle(p.x, p.y, ringR).fill({ color: 0xfff2c8, alpha: a });
+    }
+    this.exitGlow.eventMode = alpha > 0 ? "static" : "none";
+    this.exitGlow.cursor = alpha > 0 ? "pointer" : "default";
+    this.exitGlow.removeAllListeners("pointertap");
+    if (alpha > 0) {
+      this.exitGlow.on("pointertap", () => this.cb.onRequestForward?.());
+    }
+  }
+
+  // ---- 3.8 Back-Hold ----
+  private onStageDown = (ev: FederatedPointerEvent) => {
+    if (this.scene.height > 0 && ev.global.y / this.scene.height >= 0.85) {
+      this.backHoldStartedAt = performance.now();
+      this.backHoldFired = false;
+    }
+  };
+  private onStageMove = (ev: FederatedPointerEvent) => {
+    if (this.backHoldStartedAt == null) return;
+    if (ev.global.y / this.scene.height < 0.82) this.backHoldStartedAt = null;
+  };
+  private onStageUp = () => {
+    this.backHoldStartedAt = null;
+  };
+  private checkBackHold(): void {
+    if (this.backHoldStartedAt == null || this.backHoldFired) return;
+    if (performance.now() - this.backHoldStartedAt >= BACK_HOLD_MS) {
+      this.backHoldFired = true;
+      this.backHoldStartedAt = null;
+      this.cb.onRequestBack?.();
+    }
   }
 
   private gcEffects(): void {
     this.effects = this.effects.filter((e) => {
       if ((e as unknown as { mounted: boolean }).mounted === false) return false;
-      // BaseEffect setzt running=false nach ttl; entferne ausgelaufene Effekte.
       const stopped = (e as unknown as { running: boolean }).running === false
         && (e as unknown as { ttlMs: number | null }).ttlMs != null;
-      if (stopped) {
-        e.destroy();
-        return false;
-      }
+      if (stopped) { e.destroy(); return false; }
       return true;
     });
   }
@@ -185,18 +277,18 @@ export class SpurenRoom {
       flame.start();
       this.effects.push(flame);
 
-      const smoke = new SmokeEmitter({
-        position: { x: local.x, y: local.y - 20 },
-        intensity: 0.4,
-        ttlSeconds: 24,
-      });
-      smoke.mount(this.scene.layers.particles_fg);
-      smoke.start();
-      this.effects.push(smoke);
+      if (!useStore.getState().reducedMotion) {
+        const smoke = new SmokeEmitter({
+          position: { x: local.x, y: local.y - 20 },
+          intensity: 0.4,
+          ttlSeconds: 24,
+        });
+        smoke.mount(this.scene.layers.particles_fg);
+        smoke.start();
+        this.effects.push(smoke);
+      }
 
-      try {
-        audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5);
-      } catch { /* still */ }
+      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
 
       const trace: LocalTrace = {
         id: `candle-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -210,7 +302,7 @@ export class SpurenRoom {
     });
   }
 
-  // ---- Steinbett: tap → Stein erscheint und ist greifbar; drag → Wasserkante = Resonanz ----
+  // ---- Steinbett: drag → Wasserkante = Resonanz ----
   private attachStoneBed(sprite: Sprite): void {
     sprite.eventMode = "static";
     sprite.cursor = "pointer";
@@ -244,7 +336,6 @@ export class SpurenRoom {
         this.scene.app.stage.off("pointerup", release);
         this.scene.app.stage.off("pointerupoutside", release);
 
-        // Zielzone = Wasserkante (Radius 18% kürzere Seite).
         const water = denormalize(SPUREN_ANCHORS.water_edge, this.scene.width, this.scene.height);
         const dist = Math.hypot(stone.x - water.x, stone.y - water.y);
         const ok = dist < minSide * 0.18;
@@ -267,11 +358,9 @@ export class SpurenRoom {
             ttlSeconds: 180,
             createdAt: Date.now(),
           });
-          // Stein bleibt liegen an der Wasserkante.
           stone.x = water.x + (Math.random() - 0.5) * minSide * 0.05;
           stone.y = water.y + (Math.random() - 0.5) * minSide * 0.03;
         } else {
-          // Zurück ins Bett (sanft).
           stone.destroy();
         }
       };
@@ -280,29 +369,5 @@ export class SpurenRoom {
       this.scene.app.stage.on("pointerup", release);
       this.scene.app.stage.on("pointerupoutside", release);
     });
-  }
-
-  private spawnAmbientSilhouettes(n: number): void {
-    const keys = Object.keys(SPUREN_ASSETS.silhouettes);
-    const W = this.scene.width;
-    const H = this.scene.height;
-    for (let i = 0; i < n; i++) {
-      const key = keys[Math.floor(Math.random() * keys.length)];
-      const url = SPUREN_ASSETS.silhouettes[key];
-      const x = (0.15 + Math.random() * 0.7) * W;
-      const y = (0.35 + Math.random() * 0.45) * H;
-      const sil = new SilhouettePresence(
-        {
-          textureUrl: url,
-          fadeInMs: 3000 + Math.random() * 2000,
-          holdMs: 6000 + Math.random() * 6000,
-          fadeOutMs: 3500 + Math.random() * 2000,
-        },
-        { position: { x, y }, intensity: 0.85 },
-      );
-      sil.mount(this.scene.layers.parallax_mid);
-      sil.start();
-      this.effects.push(sil);
-    }
   }
 }
