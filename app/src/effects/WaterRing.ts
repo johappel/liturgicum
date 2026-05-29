@@ -1,13 +1,9 @@
 import { Graphics } from "pixi.js";
 import { BaseEffect } from "./BaseEffect";
 
-/**
- * WaterRing — animierter Wellenkreis an der Wasserkante.
- * Phase 2: konzentrische Ringe, die nach außen wachsen und ausblenden.
- * Phase 3: SDF-Ring oder Displacement-Welle.
- */
+/** WaterRing — flache perspektivische Wellen auf der Wasserfläche. */
 export class WaterRing extends BaseEffect {
-  private rings: { g: Graphics; age: number; max: number }[] = [];
+  private rings: { g: Graphics; age: number; max: number; rx: number; ry: number }[] = [];
 
   protected onMount(): void {
     const cx = this.opts.position?.x ?? 0;
@@ -15,9 +11,9 @@ export class WaterRing extends BaseEffect {
     this.container.position.set(cx, cy);
     for (let i = 0; i < 3; i++) {
       const g = new Graphics();
-      g.circle(0, 0, 8).stroke({ color: 0xa9c4d8, width: 1.5, alpha: 0.7 });
+      g.ellipse(0, 0, 12, 3.5).stroke({ color: 0xb8c7c2, width: 1, alpha: 0.42 });
       this.container.addChild(g);
-      this.rings.push({ g, age: -i * 600, max: 1800 });
+      this.rings.push({ g, age: -i * 320, max: 1700, rx: 12, ry: 3.5 });
     }
   }
 
@@ -26,12 +22,14 @@ export class WaterRing extends BaseEffect {
       r.age += deltaMs;
       if (r.age < 0) continue;
       if (r.age > r.max) {
-        r.age = -200;
+        r.g.alpha = 0;
         continue;
       }
       const p = r.age / r.max;
-      r.g.alpha = (1 - p) * 0.8 * this.intensity;
-      r.g.scale.set(1 + p * 6 * this.intensity);
+      const alpha = Math.pow(1 - p, 1.7) * 0.5 * this.intensity;
+      r.g.clear();
+      r.g.ellipse(0, 0, r.rx + p * 70 * this.intensity, r.ry + p * 12 * this.intensity)
+        .stroke({ color: 0xb8c7c2, width: 1, alpha });
     }
   }
 }

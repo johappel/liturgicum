@@ -213,6 +213,14 @@ Codeprinzipien:
 - Featureflags für experimentelle Funktionen,
 - Tests für Raumregeln und Datenschutzannahmen.
 
+Für Räume mit polygonalen Hit-, Drop- oder Sperrzonen gilt zusätzlich:
+
+- Debug-Zonen müssen per explizitem Schalter oder Query-Parameter aktivierbar sein.
+- Zonen werden farblich getrennt visualisiert, damit Wasser, Weg und Sperrflächen sofort unterscheidbar sind.
+- Wenn eine Zone visuell nicht zuverlässig aus dem Bild abgeleitet werden kann, ist manuelle Polygon-Kalibrierung das führende Werkzeug.
+- Der Raum muss einen Exportweg für die aktuellen Polygonpunkte bereitstellen, damit Korrekturen wieder in den Plan und in den Code zurückfließen können.
+- Objektlogik für Steine, Kerzen und ähnliche Gesten darf nur die dafür vorgesehenen Zonen akzeptieren; unsichere Außenbereiche müssen weich abgewiesen oder zurückgeführt werden.
+
 ## 11. Content-Regeln
 
 Impulse:
@@ -238,6 +246,12 @@ Klageinhalte:
 ## 12. Testpflicht
 
 Jedes neue Feature muss gegen `docs/TESTS/Kontrollfragen.md` geprüft werden.
+
+Für räumliche Interaktionsfeatures gehört zur Prüfung zusätzlich:
+
+- Sind alle relevanten Zonen sichtbar oder per Debug-Overlay prüfbar?
+- Stimmen Export und manuelle Korrektur der Polygonpunkte mit der aktuellen Implementierung überein?
+- Sind harte Fehlzustände vermieden, wenn eine Geste außerhalb der vorgesehenen Zone endet?
 
 Eine kurze Feature-Prüfung soll dokumentieren:
 
