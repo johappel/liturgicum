@@ -20,11 +20,22 @@ class AudioEngine {
   private masterVolume = 0.65;
   private muted = false;
   private unlocked = false;
+  /** Wenn vor der ersten Geste ein Ambient gewünscht wird, hier puffern. */
+  private pendingAmbient: { url: string; durationMs: number } | null = null;
 
   unlock(): void {
     if (this.unlocked) return;
     this.unlocked = true;
-    // Kurzer stiller Buffer-Trick könnte hier rein; Howler tut das intern.
+    // Falls vor dem Unlock schon ein Ambient gefordert wurde — jetzt starten.
+    if (this.pendingAmbient) {
+      const { url, durationMs } = this.pendingAmbient;
+      this.pendingAmbient = null;
+      void this.crossfadeAmbient(url, durationMs);
+    } else if (this.ambient) {
+      // Ambient wurde erstellt, play() aber von Autoplay-Policy blockiert.
+      // Erneuter Play-Aufruf jetzt im User-Gesten-Kontext.
+      if (!this.ambient.playing()) this.ambient.play();
+    }
   }
 
   setVolume(v: number): void {
@@ -41,13 +52,37 @@ class AudioEngine {
   async crossfadeAmbient(url: string, durationMs = 1500): Promise<void> {
     if (this.ambientUrl === url && this.ambient) return;
 
-    const next = new Howl({ src: [url], loop: true, html5: true, volume: 0 });
-    await new Promise<void>((resolve) => {
-      next.once("load", () => resolve());
-      next.once("loaderror", () => resolve()); // Fail-soft: nichts spielen.
+    // Vor User-Geste keinen Play-Versuch — Browser-Autoplay-Policy würde
+    // ihn stumm verwerfen. Nur Wunsch merken und beim ersten unlock() abspielen.
+    if (!this.unlocked) {
+      this.pendingAmbient = { url, durationMs };
+      return;
+    }
+
+    // WICHTIG: synchron starten. html5:true bindet play() an die aktive
+    // User-Geste; ein await zwischen Howl-Erzeugung und play() würde den
+    // Gesten-Kontext verlassen und die Autoplay-Policy würde stumm verwerfen.
+    const target = this.effectiveVolume(0.5);
+    const next = new Howl({
+      src: [url],
+      loop: true,
+      html5: true,
+      volume: 0,
+      autoplay: true,
+      onplay: () => next.fade(0, target, durationMs),
+      onloaderror: () => {
+        // Fail-soft: Datei fehlt -> Ambient zurücksetzen, damit ein erneuter
+        // Wunsch nicht in einer toten Howl-Referenz endet.
+        if (this.ambient === next) {
+          this.ambient = null;
+          this.ambientUrl = null;
+        }
+      },
+      onplayerror: () => {
+        // Autoplay-Policy hat trotzdem zugeschlagen -> beim nächsten unlock retry.
+        this.pendingAmbient = { url, durationMs };
+      },
     });
-    next.play();
-    next.fade(0, this.effectiveVolume(0.5), durationMs);
 
     const previous = this.ambient;
     if (previous) {
