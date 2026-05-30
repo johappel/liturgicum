@@ -712,7 +712,7 @@ export class SpurenRoom implements Room {
       return;
     }
     if (this.waterUnlocked && this.isInPoly(x, y, this.waterPoly)) {
-      this.spawnWaterRipple(x, y, 0.45);
+      this.spawnWaterRipple(x, y, 0.62);
       try { audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, 0.5); } catch { /* still */ }
     }
   };
@@ -765,7 +765,7 @@ export class SpurenRoom implements Room {
     const y = ev.global.y;
     if (this.held.kind === "stone") {
       if (this.waterUnlocked && this.isInPoly(x, y, this.waterPoly)) {
-        this.spawnWaterRipple(x, y, 0.8);
+        this.spawnWaterRipple(x, y, 0.95);
         this.playStoneWaterCue();
         this.addTrace("stone", x / this.scene.width, y / this.scene.height, 180);
         this.held.node.destroy({ children: true });
@@ -957,7 +957,7 @@ export class SpurenRoom implements Room {
     const ring = new WaterRing({
       position: { x, y },
       intensity,
-      ttlSeconds: 3,
+      ttlSeconds: 6,
     });
     ring.mount(this.interactionsRoot ?? this.scene.layers.interactions);
     ring.start();
