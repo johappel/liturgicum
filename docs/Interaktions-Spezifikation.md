@@ -54,6 +54,16 @@ Diese Eingaben werden nicht als UI-Befehle verstanden, sondern als Raumgesten.
 
 ## 3. Interaktionsphasen
 
+Vor den Objektinteraktionen kann ein Raum eine Ankommensphase haben. In dieser Zeit bleiben Hintergrund, Ambient und ggf. ein liturgischer Impuls wahrnehmbar, aber Praesenzen, Drag/Drop und andere Gesten werden noch nicht freigegeben. Der User soll zuerst den Raum betreten, nicht sofort ein System bedienen.
+
+Im Spuren-Prototyp laeuft diese Phase einmalig pro Session:
+- Ambient `ambient_low_drone.mp3` bleibt als Raumgrund bestehen.
+- `intro_2.mp3` spielt als ca. 20 Sekunden langes Wahrnehmungsfenster.
+- Danach laeuft `spuren.mp3` als gesprochene Einfuehrung.
+- Parallel erscheint der Intro-Text als leise Textschicht im Raum.
+- Danach markiert `chakra.mp3` die Freigabe der Interaktionen.
+- Erst ab dieser Freigabe beginnt die Verweildauer-Zaehlung fuer Reife und geoeffnete Folgeraeume.
+
 Die meisten Objektinteraktionen folgen derselben Grundlogik:
 
 1. `reveal`
@@ -112,7 +122,7 @@ Beispiele:
 - Papier an Klagewand,
 - Licht an Horizont oder Schwelle.
 
-Außerhalb sinnvoller Zonen soll die Handlung nicht hart fehlschlagen, sondern weich zurückgleiten oder unvollendet bleiben.
+Außerhalb sinnvoller Zonen soll die Handlung nicht hart fehlschlagen. Im aktuellen Spuren-Prototyp wird ein ungültig abgelegtes Artefakt während des Tragens sichtbar gedimmt und beim Loslassen aufgelöst. Es springt nicht automatisch in eine andere gültige Zone.
 
 ### 3.5 Resonance
 
@@ -137,7 +147,7 @@ Mögliche Raumantworten:
 - Reveal: schwaches Glimmen oder leichtes Aufrichten
 - Claim: Flamme erscheint am stabilen Kerzenkörper
 - Carry: Licht wird getragen
-- Offer: Loslassen in Lichtzone oder Kerzenbereich
+- Offer: Loslassen auf dem Weg-/Trockenbereich, außerhalb von Wasser und Steinzonen
 - Resonance: Kerzenschimmer, wärmerer Klang, Raumwärme
 
 Die Kerze sollte technisch nicht primär zwischen zwei Vollbildern umgeschaltet werden.
@@ -145,16 +155,20 @@ Die Kerze sollte technisch nicht primär zwischen zwei Vollbildern umgeschaltet 
 Stattdessen ist sinnvoll:
 
 - ein stabiler Kerzenkörper als freigestelltes Objekt,
-- eine kleine Flamme als Hybrid-Asset oder Animation,
+- eine kleine prozedurale Flamme mit Rauch,
 - Lichtsaum und Raumwärme als Laufzeitreaktion.
+
+Im Spuren-Prototyp werden Kerzen aus mehreren Sprite-Varianten zufällig gewählt, leicht in Breite/Höhe variiert und horizontal gespiegelt. Platziert brennen sie dauerhaft, bis der Raum verlassen oder der Session-Zustand zurückgesetzt wird.
 
 ### Stein
 
 - Reveal: Stein hebt sich leicht hervor
 - Claim: Gravur oder Verdichtung beginnt
 - Carry: Stein wird zu Boden oder Steinbett geführt
-- Offer: Loslassen auf Bodenniveau oder in Klagezone
+- Offer: Loslassen in einer der Steinablagezonen oder bewusst ins Wasser
 - Resonance: dumpfer Ton, dunkler Wasserkreis, schwererer Raumklang
+
+Im Spuren-Prototyp haben Steine mehrere Bildvarianten, Größenvariation und zufällige horizontale Spiegelung. Ein Stein im Wasser hinterlässt keine bleibende Ablage, sondern löst eine Wasserresonanz aus.
 
 ### Blatt
 
@@ -179,6 +193,8 @@ Stattdessen ist sinnvoll:
 - Carry: Spur über die Oberfläche
 - Offer: Loslassen beendet die Spur in Kreisen
 - Resonance: konzentrische Wellen, Reflexionsbruch, tiefer Nachhall
+
+Im Spuren-Prototyp sind Wasserkreise große, ruhige, elliptische Farbbögen. Sie laufen mehrere Sekunden und sollen bis an die wahrgenommene Wasserkante reichen, ohne blütenartige oder pulsierende Formen zu erzeugen.
 
 ### Licht
 
@@ -263,6 +279,35 @@ Beispiele, wo sie meist nicht nötig sind:
 - Wirksamkeit: 2 bis 6 Sekunden
 - Auflösen: 1 bis 3 Sekunden
 - Gesamtzeit meist unter 10 Sekunden
+
+Im Spuren-Prototyp erscheinen fremde Präsenzen als `walking`, `kneeling` oder `seated`. Sie legen gelegentlich Steine oder Kerzen als Fremd-Spur ab. Beim Verschwinden spielt ein leiser `hush`-Klang. Die Lautstärke dieses Klangs folgt der Raumtiefe: nahe am Fluchtpunkt sehr leise, im vorderen Raum deutlicher.
+
+## 6.1 Persistente Spuren im Spuren-Prototyp
+
+Der aktuelle Prototyp speichert abgelegte Artefakte im lokalen App-Zustand (`placedArtifacts`). Beim erneuten Betreten von `spuren` werden sie wieder aufgebaut.
+
+Gespeichert werden:
+- Artefaktart (`candle` oder `stone`)
+- normierte Position
+- Alpha-Wert
+- Erzeugungszeitpunkt
+
+Nicht dauerhaft festgeschrieben werden aktuell:
+- konkrete Bildvariante
+- genaue Zufallsskalierung
+- horizontale Spiegelung
+
+Das bedeutet: Die räumliche Spur bleibt erhalten, die konkrete visuelle Variante kann beim Wiederaufbau neu wirken. Diese Persistenz gilt innerhalb der laufenden Browser-Session/App-Laufzeit. Sie ist noch keine dauerhafte Speicherung über Reloads oder Geräte hinweg.
+
+## 6.2 Raumtiefe und Effektlautstärke
+
+Ortsgebundene One-Shots in `spuren` werden nicht überall gleich laut abgespielt. Die lokale Intensität wird anhand der Entfernung zum kalibrierten Fluchtpunkt moduliert:
+
+- nahe am `vanishingPoint`: stark gedämpft
+- Richtung `referencePoint`: weich ansteigend
+- vorderer Raum: volle lokale Intensität
+
+Das betrifft Wasser-, Stein-, Kerzen-, Tor- und Silhouetten-Auflösungsgeräusche. Ziel ist kein realistisches 3D-Audio, sondern eine würdige Tiefenstaffelung des Raums.
 
 ## 7. TypeScript-Modell
 

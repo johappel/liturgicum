@@ -76,6 +76,7 @@ Das Verstreute sammelt sich. Viele kleine Hinweise ordnen sich um ein stilles Ze
 - Kreisform oder Sitzordnung wird lesbar,
 - Wasser und Stein bleiben, aber dienen nun einem Klangzentrum,
 - der Raum wird weniger suchend und mehr gesammelt.
+- Der Hörraum erscheint zuerst als unklare Nebelverdichtung am Ausgang; erst danach wird sein Hintergrundbild langsam darin lesbar.
 
 **Klanglich**
 
@@ -86,6 +87,14 @@ Das Verstreute sammelt sich. Viele kleine Hinweise ordnen sich um ein stilles Ze
 **Interaktionsimpuls**
 
 Ein ruhiges Innehalten sammelt verteilte Spuren in einem gemeinsamen Klang- und Lichtzentrum.
+
+**Aktueller Prototyp**
+
+Im Spuren-Raum ist der Übergang nach Hören an eine unsichtbare `GATE_POLY`-Aktionszone gebunden. Ein Klick in diese Zone ruft direkt `onRequestForward` auf und spielt einen leisen Gate-Cue, dessen Lautstärke von der Raumtiefe abhängt. Die atmosphärische Reife kann weiterhin die Stimmung verändern, blockiert den direkten Action-Zonen-Wechsel aber nicht.
+
+Der technische Übergang ist kein Vollbild-Crossfade mehr: `RoomManager` übergibt für `hoeren` einen Portalmodus an `runTransition(...)`. Dieser Portalmodus ist als Nebel-Schwelle gestaltet. Um die Ausgangsposition herum bauen sich mehrere animierte Nebelschichten auf; das Hintergrundbild von `rooms/hoeren/background.png` ist zuerst kaum sichtbar und wird erst vorsichtig durch den Nebel hindurch lesbar. Dadurch wirkt der Wechsel wie ein Hineinhören und Weitergehen durch eine Schwelle, nicht wie eine neue Folie.
+
+Der Rückweg zum Vorhof liegt in `BACK_ACTION_POLY` und ruft direkt `onRequestBack` auf. Die Zone ist über `?debugActionZones=1` kalibrierbar.
 
 **Dauer**
 

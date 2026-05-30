@@ -29,19 +29,26 @@ rooms/spuren/
     stone_bed.png                  # Steinbett mit halb eingesunkenen Steinen
     water_edge.png                 # Wasserkante (statische Oberflächentextur)
   artifacts/
-    candle_unlit.png               # Einzelne Kerze, unangezündet (Sprite)
-    stone_loose.png                # Loser Stein (3 Varianten: stone_loose_a/b/c.png)
+    candle_unlit.png               # Fallback-Kerze, unangezündet (Sprite)
+    candle_1.png                   # Kerzenvariante 1
+    candle_2.png                   # Kerzenvariante 2
+    candle_3.png                   # Kerzenvariante 3
+    candle_4.png                   # Kerzenvariante 4
+    stone_loose_a.png              # Loser Stein, Variante A
+    stone_loose_b.png              # Loser Stein, Variante B
+    stone_loose_c.png              # Loser Stein, Variante C
     silhouette_passing.png         # Silhouette „passing" für SilhouettePresence
     silhouette_seated.png          # Silhouette „seated"
     silhouette_kneeling.png        # Silhouette „kneeling"
   audio/
-    ambient_spuren.ogg             # Loop (~60 s, nahtlos)
-    transition_in.ogg              # Vorhof → Spuren (~6 s)
-    transition_out.ogg             # Spuren → Hören (~7 s)
-    candle_lit.ogg                 # One-Shot
-    stone_placed.ogg               # One-Shot (dumpfer Klang)
-    water_resonance.ogg            # One-Shot (Tropfen + Nachhall)
-    distant_bell.ogg               # Sehr seltener Reife-Marker
+    ambient_low_drone.mp3          # Loop / Ambient
+    intro_2.mp3                    # Vorgeschalteter Intro-Klang (~20 s)
+    spuren.mp3                     # Gesprochenes Willkommen / Raumintro
+    chakra.mp3                     # Glocke nach Intro und bei Raumoeffnung
+    candle_breath.mp3              # One-Shot Kerze
+    stone_drop.mp3                 # One-Shot Stein / Gate-Fallback
+    water_ring.mp3                 # One-Shot Wasser
+    hush.mp3                       # One-Shot beim Verschwinden einer Silhouette
   meta.json                        # Maschinenlesbare Asset-Metadaten (Phase 1.1)
 rooms/_transitions/
   vorhof_to_spuren.png             # Mood-Frame
@@ -85,6 +92,10 @@ Alle mit transparentem Alpha, freigestellt; Licht- und Materialcharakter exakt a
 | Datei | Bemerkung |
 |-------|-----------|
 | `rooms/spuren/artifacts/candle_unlit.png` | Einzelne Kerze, unangezündet, freigestellt; die Flamme entsteht prozedural (siehe § 3) |
+| `rooms/spuren/artifacts/candle_1.png` | Kerzenvariante, zufällig gewählt |
+| `rooms/spuren/artifacts/candle_2.png` | Kerzenvariante, zufällig gewählt |
+| `rooms/spuren/artifacts/candle_3.png` | Kerzenvariante, zufällig gewählt |
+| `rooms/spuren/artifacts/candle_4.png` | Kerzenvariante, zufällig gewählt |
 | `rooms/spuren/artifacts/stone_loose_a.png` | Loser Stein, Variante A |
 | `rooms/spuren/artifacts/stone_loose_b.png` | Loser Stein, Variante B |
 | `rooms/spuren/artifacts/stone_loose_c.png` | Loser Stein, Variante C |
@@ -93,6 +104,11 @@ Alle mit transparentem Alpha, freigestellt; Licht- und Materialcharakter exakt a
 | `rooms/spuren/artifacts/silhouette_kneeling.png` | Schemenhafte Figur, kniend |
 
 Silhouetten sind absichtlich identitätslos: keine Gesichter, keine Konturen-Härte, leichter Alpha-Verlauf zu Rändern. Werden zur Laufzeit über `SilhouettePresence`-Modul ein-/ausgeblendet.
+
+Aktueller Laufzeitstand:
+- Kerzen werden aus `candle_1.png` bis `candle_4.png` zufällig gewählt.
+- Kerzen und Steine erhalten Größenvariation und zufällige horizontale Spiegelung.
+- Silhouetten werden ebenfalls zufällig horizontal gespiegelt.
 
 ### 2.5 Übergangs-Schlüsselbilder
 
@@ -115,8 +131,15 @@ Aus dem Session-Plan Phase 2.6. Diese Module leben im `app/`-Code und werden in 
 | `DustEmitter` | Staub in der Lichtachse über dem Kerzenfeld |
 | `WaterRing` | Wellenkreise an der Wasserkante (Stein-Resonanz, Pointer-Reveal) |
 | `SilhouettePresence` | Fremd-Spuren-Silhouetten (Fade in/out über TTL) |
-| `LeafEmitter` | *nicht* in Spuren (für spätere Räume) |
+| `LeafEmitter` | Dezente, langsam fallende Federn als atmosphärische Bewegung im Mittelgrund |
 | Lichtkreis Kerze (radialer Gradient) | Resonance-Antwort bei `candle_lit` |
+
+Aktueller Laufzeitstand:
+- Kerzenflammen werden prozedural über `FlameEmitter` erzeugt und bei platzierten Kerzen ohne TTL betrieben.
+- `SmokeEmitter` ergänzt gedimmten Rauch, sofern Reduced Motion nicht aktiv ist.
+- `WaterRing` erzeugt große, ruhige, elliptische Ringe mit langer Laufzeit.
+- `LeafEmitter` zeichnet kleine prozedurale Federformen und lässt sie langsam mit Winddrift fallen.
+- Fremd-Präsenzen legen gelegentlich Stein- oder Kerzenspuren ab und verschwinden mit `hush.mp3`.
 
 ## 4. Pixabay-Audio
 
@@ -129,13 +152,16 @@ Alle Stems CC0 oder unter Pixabay-Content-Lizenz. Pro Datei in Phase 1.5 protoko
 
 | Datei | Charakter | Länge | Bemerkung |
 |-------|-----------|-------|-----------|
-| `ambient_spuren.ogg` | tiefer warmer Drone + sehr feines Holz-/Steinrauschen | ~60 s, nahtloser Loop | −18 LUFS Ziel |
-| `transition_in.ogg` | Klangverdichtung Nebel → erste warme Töne | 6 s | endet auf demselben Grundton wie `ambient_spuren` |
-| `transition_out.ogg` | Sammlung nach hinten, dunklerer Drone | 7 s | überleitet zum Hören-Drone |
-| `candle_lit.ogg` | leises Aufflammen + sanfter Aufschwellton | 1.2 s | One-Shot, leichtes Lowpass |
-| `stone_placed.ogg` | dumpfer Stein-Aufschlag + langer Subbass-Nachhall | 2.5 s | nicht zu laut, würdevoll |
-| `water_resonance.ogg` | tiefer Tropfen + 4 s Hall-Tail | 4 s | Tail leise enden lassen |
-| `distant_bell.ogg` | sehr ferne Glocke, einmalig | 3 s | wird nur als 90 s+30 s Reife-Marker getriggert |
+| `ambient_low_drone.mp3` | tiefer warmer Drone + sehr feines Holz-/Steinrauschen | ~60 s, nahtloser Loop | Ambient über Crossfade |
+| `intro_2.mp3` | vorgeschalteter Intro-Klang | ~20 s | Zeit, den Raum wahrzunehmen, bevor Sprache einsetzt |
+| `spuren.mp3` | gesprochenes Willkommen | automatisch ermittelt | Liturgische Einführung in den Raum der Spuren; Interaktionsfreigabe und Reifezeit warten auf die Audiodauer |
+| `chakra.mp3` | Glocke / Schwellenklang | kurz | Nach dem Willkommen und beim Hinweis auf geöffneten Folgeraum |
+| `candle_breath.mp3` | leises Aufflammen + sanfter Aufschwellton | kurz | One-Shot bei Kerzenspur |
+| `stone_drop.mp3` | dumpfer Stein-Aufschlag + Nachhall | kurz | One-Shot bei Steinablage und Gate-Fallback |
+| `water_ring.mp3` | Wasserimpuls + Hall-Tail | kurz | One-Shot bei Wasserberührung und Stein ins Wasser |
+| `hush.mp3` | leises Verschwinden / Luftzug | kurz | One-Shot beim Auflösen einer Silhouette |
+
+Alle ortsgebundenen One-Shots in `SpurenRoom` werden durch die Distanz zum kalibrierten Fluchtpunkt gedämpft: hinten sehr leise, nach vorne deutlicher.
 
 ## 5. Asset-Metadaten (`meta.json`)
 

@@ -17,6 +17,7 @@ import { FlameEmitter } from "../effects/FlameEmitter";
 import { SmokeEmitter } from "../effects/SmokeEmitter";
 import { FogLayer } from "../effects/FogLayer";
 import { DustEmitter } from "../effects/DustEmitter";
+import { LeafEmitter } from "../effects/LeafEmitter";
 import { WaterRing } from "../effects/WaterRing";
 import type { BaseEffect } from "../effects/BaseEffect";
 import type { Room } from "./Room";
@@ -25,6 +26,22 @@ const RIPE_AMBIENT_S = 45;
 const RIPE_EXIT_S = 90;
 const BACK_HOLD_MS = 1500;
 const MIN_CANDLE_DISTANCE_NORM = 0.002;
+const ARRIVAL_INTRO_MS = 20000;
+const SPOKEN_INTRO_FALLBACK_MS = 120000;
+const AUDIO_METADATA_TIMEOUT_MS = 15000;
+const FEATHER_START_DELAY_MS = 10000;
+const FIRST_PRESENCE_MIN_DELAY_MS = 20000;
+const FIRST_PRESENCE_MAX_DELAY_MS = 30000;
+const ARRIVAL_TEXT = [
+  "Du bist im Raum der Spuren.",
+  "Andere waren hier, ohne sich zu zeigen.",
+  "Eine Kerze kann tragen, was noch glimmt.",
+  "Ein Stein kann halten, was schwer geworden ist.",
+  "Ein Kreis im Wasser erinnert an das Kleine, das längst begonnen hat, weiterzuwirken.",
+  "Nimm dir Zeit.",
+  "Wenn du bereit bist, darfst du einem Zeichen einen Gedanken anvertrauen.",
+];
+const EXIT_OPEN_TEXT = "Wenn du weitergehen möchtest, ist der nächste Raum offen.";
 
 const STONE_SOURCE_POLY: NormPoint[] = [
   {
@@ -537,6 +554,8 @@ export class SpurenRoom implements Room {
   private gcTimer: number | null = null;
   private resizeHandler: (() => void) | null = null;
   private presenceTimer: number | null = null;
+  private arrivalTimers: number[] = [];
+  private arrivalOverlay: HTMLDivElement | null = null;
 
   private ownedContainers: Container[] = [];
   private artifactsRoot: Container | null = null;
@@ -580,6 +599,8 @@ export class SpurenRoom implements Room {
   private placedArtifacts: Container[] = [];
 
   private exitOpen = false;
+  private exitHintShown = false;
+  private roomActivityEnabled = false;
   private ambientDenser = false;
   private waterUnlocked = true;
 
@@ -673,38 +694,39 @@ export class SpurenRoom implements Room {
       dust.mount(this.scene.layers.particles_fg);
       dust.start();
       this.effects.push(dust);
+
+      this.arrivalTimers.push(window.setTimeout(() => {
+        if (this.destroyed) return;
+        const leaves = new LeafEmitter({ intensity: 0.42 });
+        leaves.mount(this.scene.layers.parallax_mid);
+        leaves.start();
+        this.effects.push(leaves);
+      }, FEATHER_START_DELAY_MS));
     }
 
     this.restorePlacedArtifacts();
-
-    window.setTimeout(() => {
-      if (!this.destroyed) this.spawnRandomPresence();
-    }, 1800);
-    window.setTimeout(() => {
-      if (!this.destroyed) this.spawnRandomPresence();
-    }, 9000);
-    this.scheduleNextPresence();
-
-    const stage = this.scene.app.stage;
-    stage.eventMode = "static";
-    stage.on("pointerdown", this.onStageDown);
-    stage.on("pointermove", this.onStageMove);
-    stage.on("pointerup", this.onStageUp);
-    stage.on("pointerupoutside", this.onStageUp);
 
     this.resizeHandler = fitBackground;
     window.addEventListener("resize", fitBackground);
 
     this.detachTick = this.scene.onTick((dt) => {
       for (const e of this.effects) e.tick(dt);
-      const s = useStore.getState();
-      s.tickDwell(dt / 1000);
-      this.updateRipeness(s.dwellSeconds);
-      this.tickPresences(dt);
-      this.checkBackHold();
+      if (this.roomActivityEnabled) {
+        const s = useStore.getState();
+        s.tickDwell(dt / 1000);
+        this.updateRipeness(useStore.getState().dwellSeconds);
+        this.tickPresences(dt);
+        this.checkBackHold();
+      }
     });
 
     this.gcTimer = window.setInterval(() => this.gcEffects(), 2000);
+
+    if (this.shouldRunArrivalSequence()) {
+      this.startArrivalSequence();
+    } else {
+      this.enableRoomActivity();
+    }
   }
 
   destroy(): void {
@@ -719,6 +741,9 @@ export class SpurenRoom implements Room {
       window.clearTimeout(this.presenceTimer);
       this.presenceTimer = null;
     }
+    for (const timer of this.arrivalTimers) window.clearTimeout(timer);
+    this.arrivalTimers = [];
+    this.hideArrivalOverlay(true);
     if (this.resizeHandler) {
       window.removeEventListener("resize", this.resizeHandler);
       this.resizeHandler = null;
@@ -1132,7 +1157,104 @@ export class SpurenRoom implements Room {
 
     if (!this.exitOpen && dwell >= RIPE_EXIT_S) {
       this.exitOpen = true;
+      this.showExitOpenHint();
     }
+  }
+
+  private shouldRunArrivalSequence(): boolean {
+    if (this.debugMode || this.actionDebugMode || this.perspectiveDebugMode) return false;
+    return !useStore.getState().roomIntrosSeen.has("spuren");
+  }
+
+  private startArrivalSequence(): void {
+    useStore.getState().markRoomIntroSeen("spuren");
+    try { audioEngine.playOneShot(SPUREN_ASSETS.audio.arrival_intro, 0.68); } catch { /* still */ }
+    const spokenIntroDuration = loadAudioDurationMs(SPUREN_ASSETS.audio.spoken_intro, SPOKEN_INTRO_FALLBACK_MS);
+
+    this.arrivalTimers.push(window.setTimeout(() => {
+      if (this.destroyed) return;
+      this.showArrivalOverlay(ARRIVAL_TEXT);
+      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.spoken_intro, 0.82); } catch { /* still */ }
+
+      void spokenIntroDuration.then((durationMs) => {
+        if (this.destroyed) return;
+        this.arrivalTimers.push(window.setTimeout(() => {
+          if (this.destroyed) return;
+          try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.48); } catch { /* still */ }
+          this.hideArrivalOverlay();
+          this.enableRoomActivity();
+        }, durationMs));
+      });
+    }, ARRIVAL_INTRO_MS));
+  }
+
+  private enableRoomActivity(): void {
+    if (this.destroyed) return;
+    if (this.roomActivityEnabled) return;
+    this.roomActivityEnabled = true;
+    const firstPresenceDelay = randomRange(FIRST_PRESENCE_MIN_DELAY_MS, FIRST_PRESENCE_MAX_DELAY_MS);
+    window.setTimeout(() => {
+      if (!this.destroyed) this.spawnRandomPresence();
+    }, firstPresenceDelay);
+    window.setTimeout(() => {
+      if (!this.destroyed) this.spawnRandomPresence();
+    }, firstPresenceDelay + randomRange(7000, 12000));
+    this.scheduleNextPresence();
+
+    const stage = this.scene.app.stage;
+    stage.eventMode = "static";
+    stage.off("pointerdown", this.onStageDown);
+    stage.off("pointermove", this.onStageMove);
+    stage.off("pointerup", this.onStageUp);
+    stage.off("pointerupoutside", this.onStageUp);
+    stage.on("pointerdown", this.onStageDown);
+    stage.on("pointermove", this.onStageMove);
+    stage.on("pointerup", this.onStageUp);
+    stage.on("pointerupoutside", this.onStageUp);
+  }
+
+  private showArrivalOverlay(lines: string[]): void {
+    const overlay = this.ensureArrivalOverlay();
+    overlay.classList.remove("is-hiding");
+    overlay.classList.add("is-visible");
+    overlay.innerHTML = lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("");
+  }
+
+  private showExitOpenHint(): void {
+    if (this.exitHintShown || this.destroyed) return;
+    this.exitHintShown = true;
+    try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.42); } catch { /* still */ }
+    this.showArrivalOverlay([EXIT_OPEN_TEXT]);
+    this.arrivalTimers.push(window.setTimeout(() => this.hideArrivalOverlay(), 5200));
+  }
+
+  private ensureArrivalOverlay(): HTMLDivElement {
+    if (this.arrivalOverlay) return this.arrivalOverlay;
+    const overlay = document.createElement("div");
+    overlay.className = "room-intro-overlay";
+    overlay.setAttribute("aria-live", "polite");
+    const host = this.scene.app.canvas.parentElement ?? document.body;
+    host.appendChild(overlay);
+    this.arrivalOverlay = overlay;
+    return overlay;
+  }
+
+  private hideArrivalOverlay(immediate = false): void {
+    const overlay = this.arrivalOverlay;
+    if (!overlay) return;
+    if (immediate) {
+      overlay.remove();
+      this.arrivalOverlay = null;
+      return;
+    }
+    overlay.classList.add("is-hiding");
+    overlay.classList.remove("is-visible");
+    window.setTimeout(() => {
+      if (this.arrivalOverlay === overlay && overlay.classList.contains("is-hiding")) {
+        overlay.remove();
+        this.arrivalOverlay = null;
+      }
+    }, 1400);
   }
 
   private onKey(ev: KeyboardEvent): void {
@@ -1887,6 +2009,36 @@ function randomNearbyPointInPoly(
   return base;
 }
 
+function loadAudioDurationMs(url: string, fallbackMs: number): Promise<number> {
+  if (typeof Audio === "undefined") return Promise.resolve(fallbackMs);
+  return new Promise((resolve) => {
+    const audio = new Audio();
+    let settled = false;
+    const finish = (durationMs: number) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      audio.removeAttribute("src");
+      audio.load();
+      resolve(durationMs);
+    };
+    const finishFromMetadata = () => {
+      const durationMs = Number.isFinite(audio.duration) && audio.duration > 0
+        ? Math.ceil(audio.duration * 1000)
+        : fallbackMs;
+      finish(durationMs);
+    };
+    const timeout = window.setTimeout(() => finish(fallbackMs), AUDIO_METADATA_TIMEOUT_MS);
+    audio.preload = "metadata";
+    audio.addEventListener("loadedmetadata", finishFromMetadata, { once: true });
+    audio.addEventListener("durationchange", finishFromMetadata, { once: true });
+    audio.addEventListener("canplaythrough", finishFromMetadata, { once: true });
+    audio.addEventListener("error", () => finish(fallbackMs), { once: true });
+    audio.src = url;
+    audio.load();
+  });
+}
+
 function drawPolyOverlay(
   g: Graphics,
   points: number[],
@@ -1959,6 +2111,15 @@ function distancePointToSegment(p: NormPoint, a: NormPoint, b: NormPoint): numbe
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function smoothstep(value: number): number {

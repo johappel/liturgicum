@@ -1,8 +1,8 @@
-import { Graphics } from "pixi.js";
+import { Assets, Graphics, Sprite, type Texture } from "pixi.js";
 import type { Scene } from "../scene/Scene";
 import { useStore } from "../state/store";
 import { audioEngine } from "../audio/AudioEngine";
-import { SPUREN_ASSETS } from "../assets/manifest";
+import { HOEREN_ASSETS, SPUREN_ASSETS } from "../assets/manifest";
 import type { Room } from "./Room";
 
 /**
@@ -12,7 +12,8 @@ import type { Room } from "./Room";
  * Keine Interaktion: Raumatmosphäre ist die Botschaft.
  */
 export class HoerenRoom implements Room {
-  private bg: Graphics | null = null;
+  private bg: Sprite | null = null;
+  private bgTexture: Texture | null = null;
   private breathing: Graphics | null = null;
   private detachTick?: () => void;
   private resizeHandler: (() => void) | null = null;
@@ -25,12 +26,18 @@ export class HoerenRoom implements Room {
     if (this.destroyed) return;
     useStore.getState().enterRoom("hoeren");
 
+    this.bgTexture = await Assets.load<Texture>(HOEREN_ASSETS.background);
+    if (this.destroyed) return;
+
     const drawBg = () => {
-      const g = this.bg!;
-      g.clear();
-      g.rect(0, 0, this.scene.width, this.scene.height).fill({ color: 0x020203, alpha: 1 });
+      const bg = this.bg!;
+      const tex = this.bgTexture!;
+      bg.x = this.scene.width / 2;
+      bg.y = this.scene.height / 2;
+      bg.scale.set(Math.max(this.scene.width / tex.width, this.scene.height / tex.height));
     };
-    this.bg = new Graphics();
+    this.bg = Sprite.from(this.bgTexture);
+    this.bg.anchor.set(0.5);
     this.scene.layers.background.addChild(this.bg);
     drawBg();
 

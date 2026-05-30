@@ -1,6 +1,7 @@
 import type { Scene } from "../scene/Scene";
 import { runTransition } from "../scene/Transition";
 import { useStore } from "../state/store";
+import { HOEREN_ASSETS } from "../assets/manifest";
 import { VorhofRoom } from "./VorhofRoom";
 import { SpurenRoom } from "./SpurenRoom";
 import { HoerenRoom } from "./HoerenRoom";
@@ -102,6 +103,9 @@ export class RoomManager {
           mood: opts.mood ?? "forward",
           reducedMotion: reduced,
           durationMs: id === "hoeren" ? 6500 : 5500,
+          portal: id === "hoeren"
+            ? { targetBackground: HOEREN_ASSETS.background, origin: { x: 0.792, y: 0.214 } }
+            : undefined,
         });
       }
     } finally {

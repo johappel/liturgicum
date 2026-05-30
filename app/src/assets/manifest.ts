@@ -46,9 +46,20 @@ export const SPUREN_ASSETS: RoomAssets = {
   },
   audio: {
     ambient: url("spuren/audio/ambient_low_drone.mp3"),
+    arrival_intro: url("spuren/audio/intro_2.mp3"),
     candle_breath: url("spuren/audio/candle_breath.mp3"),
+    chakra: url("spuren/audio/chakra.mp3"),
     hush: url("spuren/audio/hush.mp3"),
+    spoken_intro: url("spuren/audio/spuren.mp3"),
     stone_drop: url("spuren/audio/stone_drop.mp3"),
     water_ring: url("spuren/audio/water_ring.mp3"),
   },
+};
+
+export const HOEREN_ASSETS: RoomAssets = {
+  background: url("hoeren/background.png"),
+  anchors: {},
+  artifacts: {},
+  silhouettes: {},
+  audio: {},
 };

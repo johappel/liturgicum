@@ -29,6 +29,8 @@ interface State {
   room: RoomId;
   /** Räume, die schon besucht wurden (für eventuelle Reife). */
   visited: Set<RoomId>;
+  /** Räume, deren liturgisches Intro in dieser Session bereits lief. */
+  roomIntrosSeen: Set<RoomId>;
   /** Sekunden seit Betreten des aktuellen Raums (vom Scene-Tick erhöht). */
   dwellSeconds: number;
   /** Lokale Spuren des aktuellen Raums. */
@@ -47,6 +49,7 @@ interface State {
 
 interface Actions {
   enterRoom: (room: RoomId) => void;
+  markRoomIntroSeen: (room: RoomId) => void;
   tickDwell: (deltaSeconds: number) => void;
   addTrace: (t: LocalTrace) => void;
   removeTrace: (id: string) => void;
@@ -63,6 +66,7 @@ interface Actions {
 export const useStore = create<State & Actions>((set) => ({
   room: "vorhof",
   visited: new Set(["vorhof"]),
+  roomIntrosSeen: new Set(),
   dwellSeconds: 0,
   traces: [],
   placedArtifacts: [],
@@ -79,6 +83,13 @@ export const useStore = create<State & Actions>((set) => ({
       const visited = new Set(s.visited);
       visited.add(room);
       return { room, visited, dwellSeconds: 0 };
+    }),
+
+  markRoomIntroSeen: (room) =>
+    set((s) => {
+      const roomIntrosSeen = new Set(s.roomIntrosSeen);
+      roomIntrosSeen.add(room);
+      return { roomIntrosSeen };
     }),
 
   tickDwell: (delta) =>

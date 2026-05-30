@@ -124,6 +124,26 @@ type RoomDefinition = {
 - Klangantworten auf Ko-Präsenz,
 - Übergangsklänge zwischen Räumen.
 
+### Aktueller Spuren-Prototyp
+
+Audio läuft über `Howler.js` in `app/src/audio/AudioEngine.ts`:
+
+- ein aktiver Ambient-Loop pro Raum mit Crossfade,
+- One-Shots für Wasser, Stein, Kerze, Gate-Fallback und Silhouetten-Auflösung,
+- globale Master-Lautstärke und Mute über den Store,
+- Autoplay-sicherer Unlock beim ersten Pointer-Down.
+
+In `SpurenRoom` wird die One-Shot-Intensität zusätzlich aus der Raumposition berechnet. Der kalibrierte `GROUND_PERSPECTIVE.vanishingPoint` ist akustisch sehr leise; Richtung `referencePoint` steigt die Intensität weich an. Das ist eine einfache Tiefenheuristik, keine vollständige WebAudio-Panner-Simulation.
+
+Der Spuren-Raum besitzt eine einmalige Ankommenssequenz pro Session. Sie nutzt dieselbe Audio-Engine:
+
+- Ambient per `crossfadeAmbient(...)`
+- `intro_2.mp3` als vorgeschalteter Raumwahrnehmungs-Impuls
+- `spuren.mp3` als gesprochenes Willkommen; die Dauer wird automatisch aus den Audio-Metadaten gelesen
+- `chakra.mp3` als Glocke nach dem Willkommen und als Hinweis nach 90 Sekunden
+
+Während dieser Sequenz werden Presence-Spawns und Pointer-Interaktionen erst nach Abschluss freigegeben. Die 90-Sekunden-Reifezeit fuer den Hinweis auf den geoeffneten Folgeraum startet ebenfalls erst nach dieser Freigabe, nicht beim Mount des Raums.
+
 ### Wichtige Regeln
 
 - Kein Dauerteppich ohne Atem.
@@ -140,10 +160,25 @@ type RoomDefinition = {
 - Verweildauer,
 - besuchte Räume,
 - lokal hinterlassene Spuren,
+- platzierte Artefakte im Raum,
+- gesehene Raum-Intros,
 - Audioeinstellungen,
 - reduzierte Bewegung,
 - Session-Phase,
 - Übergangszustände.
+
+### Aktueller Store-Stand
+
+Der Prototyp nutzt Zustand in `app/src/state/store.ts`. Für `spuren` existiert zusätzlich `placedArtifacts`:
+
+- `kind`: `candle` oder `stone`
+- normierte Position (`x`, `y`)
+- `alpha`
+- `createdAt`
+
+Diese Daten erlauben, beim erneuten Betreten des Raums die abgelegten Artefakte wieder aufzubauen. Es handelt sich um Session-Persistenz im lokalen App-Zustand, nicht um dauerhafte Speicherung über Browser-Reload oder Server.
+
+Zusätzlich speichert `roomIntrosSeen`, welche liturgischen Raum-Intros in der laufenden Session bereits gezeigt wurden. Dadurch laeuft das Spuren-Intro beim Zurueckkehren nicht erneut.
 
 ### Flüchtiger gemeinsamer Zustand
 
