@@ -31,6 +31,10 @@ export const SPUREN_ASSETS: RoomAssets = {
   },
   artifacts: {
     candle_unlit: url("spuren/artifacts/candle_unlit.png"),
+    candle_1: url("spuren/artifacts/candle_1.png"),
+    candle_2: url("spuren/artifacts/candle_2.png"),
+    candle_3: url("spuren/artifacts/candle_3.png"),
+    candle_4: url("spuren/artifacts/candle_4.png"),
     stone_loose_a: url("spuren/artifacts/stone_loose_a.png"),
     stone_loose_b: url("spuren/artifacts/stone_loose_b.png"),
     stone_loose_c: url("spuren/artifacts/stone_loose_c.png"),

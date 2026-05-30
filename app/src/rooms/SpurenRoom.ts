@@ -24,7 +24,7 @@ import type { Room } from "./Room";
 const RIPE_AMBIENT_S = 45;
 const RIPE_EXIT_S = 90;
 const BACK_HOLD_MS = 1500;
-const MIN_ARTIFACT_DISTANCE_NORM = 0.045;
+const MIN_CANDLE_DISTANCE_NORM = 0.032;
 
 const STONE_SOURCE_POLY: NormPoint[] = [
   // Sichtbare lose Steine im unteren Bilddrittel, vor dem Wasser.
@@ -57,47 +57,334 @@ const CANDLE_SOURCE_POLYS: NormPoint[][] = [
   ],
 ];
 const WATER_POLY: NormPoint[] = [
-  // Das tatsächlich sichtbare Wasserbecken im Hintergrundbild.
-  { x: 0.31197916666666664, y: 0.5979381443298969 },
-  { x: 0.615625, y: 0.5670103092783505 },
-  { x: 0.7958333333333333, y: 0.5829428303655108 },
-  { x: 0.840625, y: 0.6401124648547329 },
-  { x: 0.7770833333333333, y: 0.6663542642924086 },
-  { x: 0.7036458333333333, y: 0.6925960637300843 },
-  { x: 0.5255208333333333, y: 0.6944704779756327 },
-  { x: 0.29791666666666666, y: 0.6682286785379569 },
-  { x: 0.2546875, y: 0.662605435801312 },
-  { x: 0.21822916666666667, y: 0.6401124648547329 },
+  {
+    "x": 0.31197916666666664,
+    "y": 0.5979381443298969
+  },
+  {
+    "x": 0.615625,
+    "y": 0.5670103092783505
+  },
+  {
+    "x": 0.7958333333333333,
+    "y": 0.5829428303655108
+  },
+  {
+    "x": 0.840625,
+    "y": 0.6401124648547329
+  },
+  {
+    "x": 0.7625,
+    "y": 0.6925960637300843
+  },
+  {
+    "x": 0.69375,
+    "y": 0.703842549203374
+  },
+  {
+    "x": 0.5255208333333333,
+    "y": 0.6944704779756327
+  },
+  {
+    "x": 0.3802083333333333,
+    "y": 0.6682286785379569
+  },
+  {
+    "x": 0.2921875,
+    "y": 0.6522961574507966
+  },
+  {
+    "x": 0.21822916666666667,
+    "y": 0.6401124648547329
+  }
 ];
+
+const STONE_DROP_ZONES: NormPoint[][] = [
+  [
+    {
+      "x": 0.3848958333333333,
+      "y": 0.717900656044986
+    },
+    {
+      "x": 0.4864583333333333,
+      "y": 0.7047797563261481
+    },
+    {
+      "x": 0.5953125,
+      "y": 0.7216494845360825
+    },
+    {
+      "x": 0.5901041666666667,
+      "y": 0.7731958762886598
+    },
+    {
+      "x": 0.503125,
+      "y": 0.7703842549203374
+    },
+    {
+      "x": 0.4635416666666667,
+      "y": 0.8219306466729147
+    },
+    {
+      "x": 0.3723958333333333,
+      "y": 0.767572633552015
+    }
+  ],
+  [
+    {
+      "x": 0.678125,
+      "y": 0.739456419868791
+    },
+    {
+      "x": 0.7161458333333334,
+      "y": 0.7225866916588566
+    },
+    {
+      "x": 0.7354166666666667,
+      "y": 0.753514526710403
+    },
+    {
+      "x": 0.7854166666666667,
+      "y": 0.7666354264292409
+    },
+    {
+      "x": 0.8317708333333333,
+      "y": 0.7328959700093721
+    },
+    {
+      "x": 0.8317708333333333,
+      "y": 0.7328959700093721
+    },
+    {
+      "x": 0.8463541666666666,
+      "y": 0.7282099343955014
+    },
+    {
+      "x": 0.8947916666666667,
+      "y": 0.6494845360824743
+    },
+    {
+      "x": 0.9864583333333333,
+      "y": 0.7094657919400188
+    },
+    {
+      "x": 0.9177083333333333,
+      "y": 0.8734770384254921
+    },
+    {
+      "x": 0.6671875,
+      "y": 0.7760074976569822
+    }
+  ],
+  [
+    {
+      "x": 0.3927083333333333,
+      "y": 0.8294283036551078
+    },
+    {
+      "x": 0.471875,
+      "y": 0.85941893158388
+    },
+    {
+      "x": 0.5484375,
+      "y": 0.845360824742268
+    },
+    {
+      "x": 0.5932291666666667,
+      "y": 0.9915651358950328
+    },
+    {
+      "x": 0.32916666666666666,
+      "y": 0.9700093720712277
+    }
+  ]
+];
+
 const WAY_DROP_ZONE: NormPoint[] = [
-  // Begehbare Zone: Stufen/Ufer/Vordergrund, ohne Wasserfläche.
-  { x: 0.05625, y: 0.5501405810684161 },
-  { x: 0.3567708333333333, y: 0.5192127460168697 },
-  { x: 0.55, y: 0.5182755388940956 },
-  { x: 0.6447916666666667, y: 0.5220243673851921 },
-  { x: 0.6776041666666667, y: 0.4592314901593252 },
-  { x: 0.7432291666666667, y: 0.3908153701968135 },
-  { x: 0.7786458333333334, y: 0.3889409559512652 },
-  { x: 0.7197916666666667, y: 0.507029053420806 },
-  { x: 0.7208333333333333, y: 0.528584817244611 },
-  { x: 0.7869791666666667, y: 0.5257731958762887 },
-  { x: 0.784375, y: 0.5613870665417057 },
-  { x: 0.6166666666666667, y: 0.5641986879100281 },
-  { x: 0.3140625, y: 0.5904404873477038 },
-  { x: 0.21145833333333333, y: 0.6391752577319587 },
-  { x: 0.25416666666666665, y: 0.6682286785379569 },
-  { x: 0.4635416666666667, y: 0.6935332708528584 },
-  { x: 0.5744791666666667, y: 0.7075913776944704 },
-  { x: 0.6083333333333333, y: 0.7085285848172446 },
-  { x: 0.5786458333333333, y: 0.7975632614807873 },
-  { x: 0.5088541666666667, y: 0.7853795688847235 },
-  { x: 0.4609375, y: 0.8153701968134958 },
-  { x: 0.48854166666666665, y: 0.8744142455482662 },
-  { x: 0.565625, y: 0.8753514526710403 },
-  { x: 0.5145833333333333, y: 0.979381443298969 },
-  { x: 0.02, y: 0.96 },
-  { x: 0.009375, y: 0.7666354264292409 },
-  { x: 0.08072916666666667, y: 0.7638238050609185 },
+  {
+    "x": 0.06145833333333333,
+    "y": 0.5567010309278351
+  },
+  {
+    "x": 0.10260416666666666,
+    "y": 0.528584817244611
+  },
+  {
+    "x": 0.3453125,
+    "y": 0.5117150890346767
+  },
+  {
+    "x": 0.5041666666666667,
+    "y": 0.507029053420806
+  },
+  {
+    "x": 0.5536458333333333,
+    "y": 0.5060918462980318
+  },
+  {
+    "x": 0.6333333333333333,
+    "y": 0.48266166822867856
+  },
+  {
+    "x": 0.6651041666666667,
+    "y": 0.44048734770384257
+  },
+  {
+    "x": 0.7208333333333333,
+    "y": 0.3880037488284911
+  },
+  {
+    "x": 0.790625,
+    "y": 0.3898781630740394
+  },
+  {
+    "x": 0.8729166666666667,
+    "y": 0.38425492033739456
+  },
+  {
+    "x": 0.8958333333333334,
+    "y": 0.49953139643861294
+  },
+  {
+    "x": 0.9088541666666666,
+    "y": 0.5782567947516402
+  },
+  {
+    "x": 0.9010416666666666,
+    "y": 0.6457357075913777
+  },
+  {
+    "x": 0.9932291666666667,
+    "y": 0.7075913776944704
+  },
+  {
+    "x": 0.9338541666666667,
+    "y": 0.795688847235239
+  },
+  {
+    "x": 0.9239583333333333,
+    "y": 0.8791002811621368
+  },
+  {
+    "x": 0.6635416666666667,
+    "y": 0.7825679475164011
+  },
+  {
+    "x": 0.6791666666666667,
+    "y": 0.7347703842549204
+  },
+  {
+    "x": 0.7166666666666667,
+    "y": 0.7197750702905342
+  },
+  {
+    "x": 0.73125,
+    "y": 0.7516401124648547
+  },
+  {
+    "x": 0.7802083333333333,
+    "y": 0.7647610121836926
+  },
+  {
+    "x": 0.8255208333333334,
+    "y": 0.7310215557638238
+  },
+  {
+    "x": 0.7916666666666666,
+    "y": 0.6738519212746017
+  },
+  {
+    "x": 0.8494791666666667,
+    "y": 0.6504217432052484
+  },
+  {
+    "x": 0.7989583333333333,
+    "y": 0.5782567947516402
+  },
+  {
+    "x": 0.6166666666666667,
+    "y": 0.5641986879100281
+  },
+  {
+    "x": 0.3140625,
+    "y": 0.5904404873477038
+  },
+  {
+    "x": 0.21145833333333333,
+    "y": 0.6391752577319587
+  },
+  {
+    "x": 0.25416666666666665,
+    "y": 0.6682286785379569
+  },
+  {
+    "x": 0.3572916666666667,
+    "y": 0.7000937207122774
+  },
+  {
+    "x": 0.4635416666666667,
+    "y": 0.6935332708528584
+  },
+  {
+    "x": 0.5744791666666667,
+    "y": 0.7075913776944704
+  },
+  {
+    "x": 0.6625,
+    "y": 0.7047797563261481
+  },
+  {
+    "x": 0.65625,
+    "y": 0.788191190253046
+  },
+  {
+    "x": 0.5088541666666667,
+    "y": 0.7853795688847235
+  },
+  {
+    "x": 0.4609375,
+    "y": 0.8153701968134958
+  },
+  {
+    "x": 0.5505208333333333,
+    "y": 0.8528584817244611
+  },
+  {
+    "x": 0.5880208333333333,
+    "y": 0.9287722586691659
+  },
+  {
+    "x": 0.9369791666666667,
+    "y": 0.9840674789128397
+  },
+  {
+    "x": 0.31927083333333334,
+    "y": 0.9803186504217432
+  },
+  {
+    "x": 0.3828125,
+    "y": 0.8791002811621368
+  },
+  {
+    "x": 0.24114583333333334,
+    "y": 0.851921274601687
+  },
+  {
+    "x": 0.008333333333333333,
+    "y": 0.8509840674789129
+  },
+  {
+    "x": 0.009375,
+    "y": 0.7666354264292409
+  },
+  {
+    "x": 0.06302083333333333,
+    "y": 0.7450796626054358
+  },
+  {
+    "x": 0.05416666666666667,
+    "y": 0.6401124648547329
+  }
 ];
 const GATE_POLY: NormPoint[] = [
   { x: 0.74, y: 0.09 },
@@ -108,13 +395,14 @@ const GATE_POLY: NormPoint[] = [
 
 const DEBUG_WATER_COLOR = 0x2f80ed;
 const DEBUG_WAY_COLOR = 0xf2994a;
+const DEBUG_STONE_COLOR = 0x9b8a6a;
 const DEBUG_VANISHING_COLOR = 0xeb5757;
 const DEBUG_REFERENCE_COLOR = 0x27ae60;
 const GROUND_PERSPECTIVE: GroundPerspectiveConfig = {
-  // Manuell kalibrierter Fluchtpunkt (normierte Bildschirmkoordinaten).
+  // Manuell kalibrierter Fluchtpunkt (normierte Bildschirmkoordinaten => ?debugPerspective=1).
   // Entlang dieses Strahls wird die scheinbare Objektgroesse berechnet.
-  vanishingPoint: {"x":0.7942708333333334,"y":0.26522961574507964},
-  referencePoint: {"x":0.5307291666666667,"y":0.9700093720712277},
+  vanishingPoint: {"x":0.7276041666666667,"y":0.4075595126522962},
+  referencePoint: {"x":0.6520833333333333,"y":0.9325210871602624},
   minScale: 0.0025,
   nearScale: 0.89
 };
@@ -128,6 +416,8 @@ interface HeldItem {
   kind: "stone" | "candle";
   node: Container;
 }
+
+type DebugZoneKind = "water" | "way" | "stone";
 
 type PresenceKind = "walking" | "kneeling" | "seated";
 
@@ -163,10 +453,11 @@ export class SpurenRoom implements Room {
 
   private fog: FogLayer | null = null;
   private stoneTextures: Texture[] = [];
-  private candleTexture: Texture | null = null;
+  private candleTextures: Texture[] = [];
   private presenceTextures: Partial<Record<PresenceKind, Texture>> = {};
   private waterPoly: NormPoint[] = WATER_POLY.map((p) => ({ ...p }));
   private wayDropZone: NormPoint[] = WAY_DROP_ZONE.map((p) => ({ ...p }));
+  private stoneDropZones: NormPoint[][] = STONE_DROP_ZONES.map((poly) => poly.map((p) => ({ ...p })));
   private debugOverlay: Graphics | null = null;
   private perspectiveDebugOverlay: Graphics | null = null;
   private debugMode =
@@ -175,8 +466,9 @@ export class SpurenRoom implements Room {
   private perspectiveDebugMode =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("debugPerspective");
-  private activeZone: "water" | "way" = "water";
-  private draggingVertex: { zone: "water" | "way"; index: number } | null = null;
+  private activeZone: DebugZoneKind = "water";
+  private activeStoneZoneIndex = 0;
+  private draggingVertex: { zone: DebugZoneKind; zoneIndex?: number; index: number } | null = null;
   private activePerspectiveHandle: "vanishing" | "reference" = "vanishing";
   private draggingPerspectiveHandle: "vanishing" | "reference" | null = null;
   private lastPointerNorm: NormPoint = { x: 0.5, y: 0.5 };
@@ -213,13 +505,17 @@ export class SpurenRoom implements Room {
       Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_b),
       Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_c),
     ]);
-    const [candleTexture, passingTexture, kneelingTexture, seatedTexture] = await Promise.all([
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_unlit),
+    this.candleTextures = await Promise.all([
+      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_1),
+      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_2),
+      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_3),
+      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_4),
+    ]);
+    const [passingTexture, kneelingTexture, seatedTexture] = await Promise.all([
       Assets.load<Texture>(SPUREN_ASSETS.silhouettes.passing),
       Assets.load<Texture>(SPUREN_ASSETS.silhouettes.kneeling),
       Assets.load<Texture>(SPUREN_ASSETS.silhouettes.seated),
     ]);
-    this.candleTexture = candleTexture;
     this.presenceTextures = {
       walking: passingTexture,
       kneeling: kneelingTexture,
@@ -246,7 +542,7 @@ export class SpurenRoom implements Room {
       this.debugOverlay = new Graphics();
       this.scene.layers.overlay.addChild(this.debugOverlay);
       this.drawDebugZones();
-      console.info("[debugZones] Controls: W=water, D=way, A=add vertex at cursor, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
+      console.info("[debugZones] Controls: W=water, D=way, S/1-3=stone drop zone, A=add vertex at cursor, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
     }
     if (this.perspectiveDebugMode) {
       this.perspectiveDebugOverlay = new Graphics();
@@ -429,7 +725,7 @@ export class SpurenRoom implements Room {
     if (this.draggingVertex) {
       const nx = clamp(x / this.scene.width, 0, 1);
       const ny = clamp(y / this.scene.height, 0, 1);
-      const poly = this.draggingVertex.zone === "water" ? this.waterPoly : this.wayDropZone;
+      const poly = this.debugPolyForDrag(this.draggingVertex);
       poly[this.draggingVertex.index] = { x: nx, y: ny };
       this.drawDebugZones();
       return;
@@ -481,12 +777,12 @@ export class SpurenRoom implements Room {
         }
       }
     } else {
-      if (this.isInPoly(x, y, this.wayDropZone) && !this.isInPoly(x, y, this.waterPoly)) {
+      if (this.isInPoly(x, y, this.wayDropZone) && !this.isInPoly(x, y, this.waterPoly) && !this.isInAnyPoly(x, y, this.stoneDropZones)) {
         const placed = this.placeGroundCandle(this.held.node, x, y, 1);
         if (placed) {
           const flameScale = this.candleScaleForPoint(this.held.node.x, this.held.node.y);
-          this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, 180, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y), flameScale);
-          this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, 180);
+          this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, null, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y), flameScale);
+          this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, null);
           try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
         }
       } else {
@@ -533,10 +829,14 @@ export class SpurenRoom implements Room {
       stone.width = 72;
       stone.height = 46;
       stone.alpha = 0.9;
+      const sizeFactor = randomRange(0.72, 1.26);
+      stone.scale.x *= randomHorizontalMirror() * sizeFactor;
+      stone.scale.y *= sizeFactor;
     } else {
-      const target = 92;
+      const target = 92 * randomRange(0.72, 1.26);
       const side = Math.max(tex.width, tex.height) || 1;
-      stone.scale.set(target / side);
+      const scale = target / side;
+      stone.scale.set(scale * randomHorizontalMirror(), scale);
     }
     c.addChild(shadow, stone);
     return c;
@@ -548,12 +848,16 @@ export class SpurenRoom implements Room {
     shadow.ellipse(0, 0, 18, 5).fill({ color: 0x050403, alpha: 0.26 });
     const heightFactor = 0.84 + Math.random() * 0.34;
     const widthFactor = 0.82 + Math.random() * 0.34;
-    if (this.candleTexture) {
-      const candle = new Sprite(this.candleTexture);
+    const textures = this.candleTextures.length > 0
+      ? this.candleTextures
+      : [Texture.WHITE];
+    const tex = textures[Math.floor(Math.random() * textures.length)];
+    if (tex !== Texture.WHITE) {
+      const candle = new Sprite(tex);
       candle.anchor.set(0.5, 1);
       const targetHeight = 82 * heightFactor;
-      candle.scale.set(targetHeight / Math.max(this.candleTexture.height, 1));
-      candle.scale.x *= widthFactor;
+      candle.scale.set(targetHeight / Math.max(tex.height, 1));
+      candle.scale.x *= widthFactor * randomHorizontalMirror();
       c.addChild(shadow, candle);
       return c;
     }
@@ -576,10 +880,7 @@ export class SpurenRoom implements Room {
     foreign: boolean,
   ): void {
     const base = { x: x / this.scene.width, y: y / this.scene.height };
-    const preferred = this.isInPoly(x, y, this.wayDropZone)
-      ? base
-      : randomNearbyPointInPoly(this.wayDropZone, base, 0.03, this.waterPoly);
-    const point = this.resolveArtifactPlacementPoint(preferred, 0.045);
+    const point = this.resolveStonePlacementPoint(base, 0.045);
     if (!point) {
       node.destroy({ children: true });
       return;
@@ -600,7 +901,7 @@ export class SpurenRoom implements Room {
     const preferred = this.isInPoly(x, y, this.wayDropZone)
       ? base
       : randomNearbyPointInPoly(this.wayDropZone, base, 0.03, this.waterPoly);
-    const point = this.resolveArtifactPlacementPoint(preferred, 0.04);
+    const point = this.resolveCandlePlacementPoint(preferred, 0.04);
     if (!point) {
       node.destroy({ children: true });
       return false;
@@ -629,7 +930,7 @@ export class SpurenRoom implements Room {
     return Math.max(8, this.candleScaleForPoint(x, y) * 74);
   }
 
-  private attachCandleFlame(x: number, y: number, intensity: number, ttlSeconds: number, offsetY = 18, flameScale = 1): void {
+  private attachCandleFlame(x: number, y: number, intensity: number, ttlSeconds: number | null, offsetY = 18, flameScale = 1): void {
     const flame = new FlameEmitter({
       position: { x, y: y - offsetY },
       intensity,
@@ -724,26 +1025,39 @@ export class SpurenRoom implements Room {
       this.drawDebugZones();
       return;
     }
+    if (ev.key.toLowerCase() === "s") {
+      this.activeZone = "stone";
+      this.ensureStoneDropZone(this.activeStoneZoneIndex);
+      this.drawDebugZones();
+      return;
+    }
+    if (/^[1-3]$/.test(ev.key)) {
+      this.activeZone = "stone";
+      this.activeStoneZoneIndex = Number(ev.key) - 1;
+      this.ensureStoneDropZone(this.activeStoneZoneIndex);
+      this.drawDebugZones();
+      return;
+    }
     if (ev.key.toLowerCase() === "a") {
-      const poly = this.activeZone === "water" ? this.waterPoly : this.wayDropZone;
+      const poly = this.activeDebugPoly();
       poly.push({ ...this.lastPointerNorm });
       this.drawDebugZones();
       return;
     }
     if (ev.key.toLowerCase() === "n") {
-      const poly = this.activeZone === "water" ? this.waterPoly : this.wayDropZone;
+      const poly = this.activeDebugPoly();
       insertPointOnNearestEdge(poly, this.lastPointerNorm);
       this.drawDebugZones();
       return;
     }
     if (ev.key.toLowerCase() === "m") {
-      const poly = this.activeZone === "water" ? this.waterPoly : this.wayDropZone;
+      const poly = this.activeDebugPoly();
       subdividePoly(poly);
       this.drawDebugZones();
       return;
     }
     if (ev.key === "Backspace" || ev.key === "Delete") {
-      const poly = this.activeZone === "water" ? this.waterPoly : this.wayDropZone;
+      const poly = this.activeDebugPoly();
       if (poly.length <= 3) return;
       const idx = nearestVertexIndex(this.lastPointerNorm, poly);
       poly.splice(idx, 1);
@@ -756,11 +1070,49 @@ export class SpurenRoom implements Room {
     }
   }
 
-  private findDebugVertex(x: number, y: number, thresholdPx: number): { zone: "water" | "way"; index: number } | null {
+  private activeDebugPoly(): NormPoint[] {
+    if (this.activeZone === "water") return this.waterPoly;
+    if (this.activeZone === "way") return this.wayDropZone;
+    this.ensureStoneDropZone(this.activeStoneZoneIndex);
+    return this.stoneDropZones[this.activeStoneZoneIndex];
+  }
+
+  private debugPolyForDrag(hit: { zone: DebugZoneKind; zoneIndex?: number }): NormPoint[] {
+    if (hit.zone === "water") return this.waterPoly;
+    if (hit.zone === "way") return this.wayDropZone;
+    this.ensureStoneDropZone(hit.zoneIndex ?? 0);
+    return this.stoneDropZones[hit.zoneIndex ?? 0];
+  }
+
+  private ensureStoneDropZone(index: number): void {
+    while (this.stoneDropZones.length <= index) {
+      const center = this.lastPointerNorm;
+      const halfWidth = 0.045;
+      const halfHeight = 0.035;
+      this.stoneDropZones.push([
+        { x: clamp(center.x - halfWidth, 0, 1), y: clamp(center.y - halfHeight, 0, 1) },
+        { x: clamp(center.x + halfWidth, 0, 1), y: clamp(center.y - halfHeight, 0, 1) },
+        { x: clamp(center.x + halfWidth, 0, 1), y: clamp(center.y + halfHeight, 0, 1) },
+        { x: clamp(center.x - halfWidth, 0, 1), y: clamp(center.y + halfHeight, 0, 1) },
+      ]);
+    }
+  }
+
+  private findDebugVertex(x: number, y: number, thresholdPx: number): { zone: DebugZoneKind; zoneIndex?: number; index: number } | null {
+    const active = this.findVertexInPoly(this.activeDebugPoly(), x, y, thresholdPx);
+    if (active != null) {
+      return this.activeZone === "stone"
+        ? { zone: "stone", zoneIndex: this.activeStoneZoneIndex, index: active }
+        : { zone: this.activeZone, index: active };
+    }
     const water = this.findVertexInPoly(this.waterPoly, x, y, thresholdPx);
     if (water != null) return { zone: "water", index: water };
     const way = this.findVertexInPoly(this.wayDropZone, x, y, thresholdPx);
     if (way != null) return { zone: "way", index: way };
+    for (let zoneIndex = 0; zoneIndex < this.stoneDropZones.length; zoneIndex++) {
+      const stone = this.findVertexInPoly(this.stoneDropZones[zoneIndex], x, y, thresholdPx);
+      if (stone != null) return { zone: "stone", zoneIndex, index: stone };
+    }
     return null;
   }
 
@@ -779,6 +1131,14 @@ export class SpurenRoom implements Room {
     g.clear();
     drawPolyOverlay(g, this.toPixels(this.waterPoly), DEBUG_WATER_COLOR, this.activeZone === "water");
     drawPolyOverlay(g, this.toPixels(this.wayDropZone), DEBUG_WAY_COLOR, this.activeZone === "way");
+    for (let i = 0; i < this.stoneDropZones.length; i++) {
+      drawPolyOverlay(
+        g,
+        this.toPixels(this.stoneDropZones[i]),
+        DEBUG_STONE_COLOR,
+        this.activeZone === "stone" && this.activeStoneZoneIndex === i,
+      );
+    }
   }
 
   private drawPerspectiveDebug(): void {
@@ -813,6 +1173,7 @@ export class SpurenRoom implements Room {
   private exportDebugPolys(): void {
     const text = [
       "const WATER_POLY: NormPoint[] = " + JSON.stringify(this.waterPoly, null, 2) + ";",
+      "const STONE_DROP_ZONES: NormPoint[][] = " + JSON.stringify(this.stoneDropZones, null, 2) + ";",
       "const WAY_DROP_ZONE: NormPoint[] = " + JSON.stringify(this.wayDropZone, null, 2) + ";",
     ].join("\n\n");
     console.log(text);
@@ -934,6 +1295,7 @@ export class SpurenRoom implements Room {
       sprite.anchor.set(0.5, 1);
       const targetHeight = PRESENCE_BASE_HEIGHT[kind];
       sprite.scale.set(targetHeight / Math.max(texture.height, 1));
+      sprite.scale.x *= randomHorizontalMirror();
       sprite.alpha = 0.9;
       c.addChild(shadow, sprite);
       return c;
@@ -941,15 +1303,18 @@ export class SpurenRoom implements Room {
 
     const g = new Graphics();
     if (kind === "walking") {
+      g.scale.x = randomHorizontalMirror();
       g.ellipse(0, -30, 11, 13).fill({ color: 0xe6e2d8, alpha: 0.36 });
       g.roundRect(-10, -18, 20, 38, 8).fill({ color: 0xe0dbcf, alpha: 0.3 });
       g.roundRect(-13, 14, 8, 28, 5).fill({ color: 0xd8d2c8, alpha: 0.24 });
       g.roundRect(5, 14, 8, 28, 5).fill({ color: 0xd8d2c8, alpha: 0.24 });
     } else if (kind === "kneeling") {
+      g.scale.x = randomHorizontalMirror();
       g.ellipse(-8, 13, 18, 10).fill({ color: 0xe0dbcf, alpha: 0.28 });
       g.roundRect(-18, -12, 28, 30, 8).fill({ color: 0xe0dbcf, alpha: 0.28 });
       g.ellipse(8, -20, 9, 10).fill({ color: 0xe6e2d8, alpha: 0.34 });
     } else {
+      g.scale.x = randomHorizontalMirror();
       g.ellipse(0, 15, 20, 11).fill({ color: 0xe0dbcf, alpha: 0.26 });
       g.roundRect(-18, -20, 36, 28, 8).fill({ color: 0xe0dbcf, alpha: 0.26 });
       g.ellipse(0, -30, 10, 11).fill({ color: 0xe6e2d8, alpha: 0.34 });
@@ -1003,12 +1368,12 @@ export class SpurenRoom implements Room {
       candle.x,
       candle.y,
       0.42,
-      220,
+      null,
       this.candleFlameOffsetForPoint(candle.x, candle.y) * 0.88,
       this.candleScaleForPoint(candle.x, candle.y) * 0.88,
     );
     try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
-    this.addTrace("candle", candle.x / this.scene.width, candle.y / this.scene.height, 220);
+    this.addTrace("candle", candle.x / this.scene.width, candle.y / this.scene.height, null);
   }
 
   private rememberPlacedArtifact(node: Container): void {
@@ -1016,30 +1381,60 @@ export class SpurenRoom implements Room {
     if (!this.placedArtifacts.includes(node)) this.placedArtifacts.push(node);
   }
 
-  private resolveArtifactPlacementPoint(preferred: NormPoint, searchRadius: number): NormPoint | null {
-    if (this.isValidArtifactPoint(preferred)) return preferred;
+  private resolveStonePlacementPoint(preferred: NormPoint, searchRadius: number): NormPoint | null {
+    if (this.isValidStonePoint(preferred)) return preferred;
 
-    for (let i = 0; i < 24; i++) {
-      const point = randomNearbyPointInPoly(this.wayDropZone, preferred, searchRadius, this.waterPoly);
-      if (this.isValidArtifactPoint(point)) return point;
+    for (const zone of this.stoneDropZones) {
+      for (let i = 0; i < 16; i++) {
+        const point = randomNearbyPointInPoly(zone, preferred, searchRadius, this.waterPoly);
+        if (this.isValidStonePoint(point)) return point;
+      }
     }
 
     for (let i = 0; i < 48; i++) {
-      const point = randomPointInPoly(this.wayDropZone);
-      if (this.isValidArtifactPoint(point)) return point;
+      const point = randomPointInAnyPoly(this.stoneDropZones);
+      if (this.isValidStonePoint(point)) return point;
     }
 
     return null;
   }
 
-  private isValidArtifactPoint(point: NormPoint): boolean {
+  private resolveCandlePlacementPoint(preferred: NormPoint, searchRadius: number): NormPoint | null {
+    if (this.isValidCandlePoint(preferred)) return preferred;
+
+    for (let i = 0; i < 24; i++) {
+      const point = randomNearbyPointInPoly(this.wayDropZone, preferred, searchRadius, this.waterPoly);
+      if (this.isValidCandlePoint(point)) return point;
+    }
+
+    for (let i = 0; i < 48; i++) {
+      const point = randomPointInPoly(this.wayDropZone);
+      if (this.isValidCandlePoint(point)) return point;
+    }
+
+    return null;
+  }
+
+  private isValidStonePoint(point: NormPoint): boolean {
+    return pointInAnyNormPolygon(point.x, point.y, this.stoneDropZones)
+      && !pointInNormPolygon(point.x, point.y, this.waterPoly);
+  }
+
+  private isValidCandlePoint(point: NormPoint): boolean {
+    return pointInNormPolygon(point.x, point.y, this.wayDropZone)
+      && !pointInNormPolygon(point.x, point.y, this.waterPoly)
+      && !pointInAnyNormPolygon(point.x, point.y, this.stoneDropZones)
+      && this.hasCandleSpacing(point);
+  }
+
+  private hasCandleSpacing(point: NormPoint): boolean {
     if (pointInNormPolygon(point.x, point.y, this.waterPoly)) return false;
     for (const artifact of this.placedArtifacts) {
       if ((artifact as unknown as { destroyed?: boolean }).destroyed) continue;
       const ax = artifact.x / this.scene.width;
       const ay = artifact.y / this.scene.height;
       const distance = Math.hypot(ax - point.x, (ay - point.y) * 0.75);
-      if (distance < MIN_ARTIFACT_DISTANCE_NORM) return false;
+      if (distance < MIN_CANDLE_DISTANCE_NORM) return false;
     }
     return true;
   }
@@ -1066,7 +1461,7 @@ export class SpurenRoom implements Room {
     });
   }
 
-  private addTrace(kind: LocalTrace["kind"], x: number, y: number, ttlSeconds: number): void {
+  private addTrace(kind: LocalTrace["kind"], x: number, y: number, ttlSeconds: number | null): void {
     useStore.getState().addTrace({
       id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       kind,
@@ -1113,6 +1508,13 @@ function pointInNormPolygon(x: number, y: number, poly: NormPoint[]): boolean {
   return inside;
 }
 
+function pointInAnyNormPolygon(x: number, y: number, polys: NormPoint[][]): boolean {
+  for (const poly of polys) {
+    if (pointInNormPolygon(x, y, poly)) return true;
+  }
+  return false;
+}
+
 function randomPointInPoly(poly: NormPoint[]): NormPoint {
   const xs = poly.map((p) => p.x);
   const ys = poly.map((p) => p.y);
@@ -1130,6 +1532,12 @@ function randomPointInPoly(poly: NormPoint[]): NormPoint {
   const sx = poly.reduce((sum, p) => sum + p.x, 0) / poly.length;
   const sy = poly.reduce((sum, p) => sum + p.y, 0) / poly.length;
   return { x: sx, y: sy };
+}
+
+function randomPointInAnyPoly(polys: NormPoint[][]): NormPoint {
+  if (polys.length === 0) return { x: 0.5, y: 0.5 };
+  const poly = polys[Math.floor(Math.random() * polys.length)];
+  return randomPointInPoly(poly);
 }
 
 function randomNearbyPointInPoly(
@@ -1222,4 +1630,12 @@ function distancePointToSegment(p: NormPoint, a: NormPoint, b: NormPoint): numbe
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function randomRange(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function randomHorizontalMirror(): 1 | -1 {
+  return Math.random() < 0.5 ? -1 : 1;
 }
