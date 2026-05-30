@@ -18,6 +18,10 @@ Dieses Dokument fuehrt die umgesetzten Aenderungen fuer den Erprobungsraum Spure
   - Back-Zone (`BACK_ACTION_POLY`) ruft direkt `onRequestBack` auf.
 - Neuer Debugmodus `?debugActionZones=1` fuer Aktionspolygone (Forward, Back, Kerzenquellen, Steinquelle).
 - Neues Silhouetten-Ende-Audio: `rooms/spuren/audio/hush.mp3` beim Verschwinden einer Presence.
+- Praesenz-Dichte begrenzt:
+  - Praesenzen erscheinen nur beim ersten Besuch des Raums.
+  - Ihre Spawn-Abstaende wachsen mit Dauer und Anzahl.
+  - Fremd-Artefakte sind gedeckelt, damit sich der Raum nicht unendlich fuellt.
 - Distanzabhaengige Effektlautstaerke in Spuren:
   - Nahe Fluchtpunkt sehr leise.
   - Richtung Referenzpunkt weich ansteigend.

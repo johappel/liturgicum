@@ -32,6 +32,8 @@ const AUDIO_METADATA_TIMEOUT_MS = 15000;
 const FEATHER_START_DELAY_MS = 10000;
 const FIRST_PRESENCE_MIN_DELAY_MS = 20000;
 const FIRST_PRESENCE_MAX_DELAY_MS = 30000;
+const MAX_PRESENCE_SPAWNS = 6;
+const MAX_FOREIGN_TRACE_ARTIFACTS = 5;
 const ARRIVAL_TEXT = [
   "Du bist im Raum der Spuren.",
   "Andere waren hier, ohne sich zu zeigen.",
@@ -597,6 +599,9 @@ export class SpurenRoom implements Room {
   private held: HeldItem | null = null;
   private presences: PresenceActor[] = [];
   private placedArtifacts: Container[] = [];
+  private presenceSpawnCount = 0;
+  private foreignTraceArtifactCount = 0;
+  private suppressPresenceSpawns = false;
 
   private exitOpen = false;
   private exitHintShown = false;
@@ -612,6 +617,8 @@ export class SpurenRoom implements Room {
 
   async mount(): Promise<void> {
     if (this.destroyed || !this.scene.isReady) return;
+    this.suppressPresenceSpawns = useStore.getState().visited.has("spuren")
+      && useStore.getState().roomIntrosSeen.has("spuren");
     useStore.getState().enterRoom("spuren");
 
     try { audioEngine.crossfadeAmbient(SPUREN_ASSETS.audio.ambient, 2500); } catch { /* still */ }
@@ -1192,15 +1199,23 @@ export class SpurenRoom implements Room {
     if (this.destroyed) return;
     if (this.roomActivityEnabled) return;
     this.roomActivityEnabled = true;
+    if (this.suppressPresenceSpawns) {
+      this.enableStageInteractions();
+      return;
+    }
     const firstPresenceDelay = randomRange(FIRST_PRESENCE_MIN_DELAY_MS, FIRST_PRESENCE_MAX_DELAY_MS);
-    window.setTimeout(() => {
+    this.arrivalTimers.push(window.setTimeout(() => {
       if (!this.destroyed) this.spawnRandomPresence();
-    }, firstPresenceDelay);
-    window.setTimeout(() => {
+    }, firstPresenceDelay));
+    this.arrivalTimers.push(window.setTimeout(() => {
       if (!this.destroyed) this.spawnRandomPresence();
-    }, firstPresenceDelay + randomRange(7000, 12000));
-    this.scheduleNextPresence();
+      this.scheduleNextPresence();
+    }, firstPresenceDelay + randomRange(7000, 12000)));
 
+    this.enableStageInteractions();
+  }
+
+  private enableStageInteractions(): void {
     const stage = this.scene.app.stage;
     stage.eventMode = "static";
     stage.off("pointerdown", this.onStageDown);
@@ -1624,8 +1639,11 @@ export class SpurenRoom implements Room {
   }
 
   private scheduleNextPresence(): void {
-    if (this.destroyed) return;
-    const delayMs = 12000 + Math.random() * 18000;
+    if (this.destroyed || this.suppressPresenceSpawns || this.presenceSpawnCount >= MAX_PRESENCE_SPAWNS) return;
+    const dwell = useStore.getState().dwellSeconds;
+    const delayMs = randomRange(22000, 36000)
+      + this.presenceSpawnCount * 14000
+      + dwell * 450;
     this.presenceTimer = window.setTimeout(() => {
       if (this.destroyed) return;
       this.spawnRandomPresence();
@@ -1634,6 +1652,8 @@ export class SpurenRoom implements Room {
   }
 
   private spawnRandomPresence(): void {
+    if (this.suppressPresenceSpawns || this.presenceSpawnCount >= MAX_PRESENCE_SPAWNS) return;
+    this.presenceSpawnCount += 1;
     const r = Math.random();
     if (r < 0.38) this.spawnForeignPresence("walking");
     else if (r < 0.68) this.spawnForeignPresence("kneeling");
@@ -1675,6 +1695,7 @@ export class SpurenRoom implements Room {
   }
 
   private leavePresenceTrace(kind: PresenceKind, zone: NormPoint[], x: number, y: number): void {
+    if (!this.shouldLeaveForeignTraceArtifact()) return;
     const base = { x: x / this.scene.width, y: y / this.scene.height };
     const tracePoint = randomNearbyPointInPoly(zone, base, 0.04, this.waterPoly);
     const tx = tracePoint.x * this.scene.width;
@@ -1774,6 +1795,7 @@ export class SpurenRoom implements Room {
     const stone = this.createStoneNode();
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(stone);
     this.placeGroundStone(stone, x, y, 0.72, true, true, true);
+    this.foreignTraceArtifactCount += 1;
   }
 
   private leaveForeignCandle(x: number, y: number): void {
@@ -1791,6 +1813,14 @@ export class SpurenRoom implements Room {
     );
     try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, this.effectVolumeAtPoint(0.5, candle.x, candle.y)); } catch { /* still */ }
     this.addTrace("candle", candle.x / this.scene.width, candle.y / this.scene.height, null);
+    this.foreignTraceArtifactCount += 1;
+  }
+
+  private shouldLeaveForeignTraceArtifact(): boolean {
+    if (this.foreignTraceArtifactCount >= MAX_FOREIGN_TRACE_ARTIFACTS) return false;
+    const dwell = useStore.getState().dwellSeconds;
+    const chance = clamp(0.72 - this.foreignTraceArtifactCount * 0.12 - dwell / 900, 0.16, 0.72);
+    return Math.random() < chance;
   }
 
   private restorePlacedArtifacts(): void {

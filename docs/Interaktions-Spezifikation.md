@@ -282,6 +282,8 @@ Beispiele, wo sie meist nicht nötig sind:
 
 Im Spuren-Prototyp erscheinen fremde Präsenzen als `walking`, `kneeling` oder `seated`. Sie legen gelegentlich Steine oder Kerzen als Fremd-Spur ab. Beim Verschwinden spielt ein leiser `hush`-Klang. Die Lautstärke dieses Klangs folgt der Raumtiefe: nahe am Fluchtpunkt sehr leise, im vorderen Raum deutlicher.
 
+Damit der Raum nicht unendlich durch Fremd-Spuren anwächst, sind Präsenzen begrenzt: Beim ersten Besuch erscheinen nur wenige Präsenzen, ihre Abstände werden mit zunehmender Verweildauer größer, und die Zahl ihrer hinterlassenen Artefakte ist gedeckelt. Beim Zurückkehren in den Raum erscheinen keine neuen fremden Präsenzen mehr; bestehende Spuren bleiben als Erinnerung erhalten.
+
 ## 6.1 Persistente Spuren im Spuren-Prototyp
 
 Der aktuelle Prototyp speichert abgelegte Artefakte im lokalen App-Zustand (`placedArtifacts`). Beim erneuten Betreten von `spuren` werden sie wieder aufgebaut.
