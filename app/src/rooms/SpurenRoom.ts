@@ -11,7 +11,7 @@ import {
   type GroundPerspectiveConfig,
 } from "../scene/perspectiveDebug";
 import { SPUREN_ASSETS } from "../assets/manifest";
-import { useStore, type LocalTrace } from "../state/store";
+import { useStore, type LocalTrace, type PlacedArtifact } from "../state/store";
 import { audioEngine } from "../audio/AudioEngine";
 import { FlameEmitter } from "../effects/FlameEmitter";
 import { SmokeEmitter } from "../effects/SmokeEmitter";
@@ -24,37 +24,111 @@ import type { Room } from "./Room";
 const RIPE_AMBIENT_S = 45;
 const RIPE_EXIT_S = 90;
 const BACK_HOLD_MS = 1500;
-const MIN_CANDLE_DISTANCE_NORM = 0.032;
+const MIN_CANDLE_DISTANCE_NORM = 0.002;
 
 const STONE_SOURCE_POLY: NormPoint[] = [
-  // Sichtbare lose Steine im unteren Bilddrittel, vor dem Wasser.
-  { x: 0.32, y: 0.68 },
-  { x: 0.50, y: 0.66 },
-  { x: 0.51, y: 0.86 },
-  { x: 0.31, y: 0.88 },
+  {
+    "x": 0.384375,
+    "y": 0.7235238987816307
+  },
+  {
+    "x": 0.5703125,
+    "y": 0.711340206185567
+  },
+  {
+    "x": 0.578125,
+    "y": 0.7966260543580131
+  },
+  {
+    "x": 0.3953125,
+    "y": 0.7919400187441424
+  }
 ];
 const CANDLE_SOURCE_POLYS: NormPoint[][] = [
-  // Wandnische links.
   [
-    { x: 0.01, y: 0.30 },
-    { x: 0.10, y: 0.28 },
-    { x: 0.10, y: 0.45 },
-    { x: 0.01, y: 0.48 },
+    {
+      "x": 0.12447916666666667,
+      "y": 0.3252108716026242
+    },
+    {
+      "x": 0.18697916666666667,
+      "y": 0.3280224929709466
+    },
+    {
+      "x": 0.1875,
+      "y": 0.4104967197750703
+    },
+    {
+      "x": 0.18333333333333332,
+      "y": 0.47141518275538896
+    },
+    {
+      "x": 0.12760416666666666,
+      "y": 0.4751640112464855
+    }
   ],
-  // Vordergrundschale rechts unten.
   [
-    { x: 0.69, y: 0.62 },
-    { x: 0.86, y: 0.62 },
-    { x: 0.84, y: 0.86 },
-    { x: 0.66, y: 0.86 },
+    {
+      "x": 0.7255208333333333,
+      "y": 0.6316776007497656
+    },
+    {
+      "x": 0.8192708333333333,
+      "y": 0.6316776007497656
+    },
+    {
+      "x": 0.8072916666666666,
+      "y": 0.7666354264292409
+    },
+    {
+      "x": 0.728125,
+      "y": 0.7553889409559512
+    }
   ],
-  // Kleine Lichter am Wasserbecken.
   [
-    { x: 0.49, y: 0.41 },
-    { x: 0.68, y: 0.40 },
-    { x: 0.69, y: 0.54 },
-    { x: 0.47, y: 0.55 },
-  ],
+    {
+      "x": 0.1828125,
+      "y": 0.507029053420806
+    },
+    {
+      "x": 0.6432291666666666,
+      "y": 0.43673851921274603
+    },
+    {
+      "x": 0.753125,
+      "y": 0.3430178069353327
+    },
+    {
+      "x": 0.8026041666666667,
+      "y": 0.3345829428303655
+    },
+    {
+      "x": 0.7442708333333333,
+      "y": 0.542642924086223
+    },
+    {
+      "x": 0.29322916666666665,
+      "y": 0.5726335520149953
+    }
+  ]
+];
+const BACK_ACTION_POLY: NormPoint[] = [
+  {
+    "x": 0.18958333333333333,
+    "y": 0.9353327085285849
+  },
+  {
+    "x": 0.3380208333333333,
+    "y": 0.8978444236176195
+  },
+  {
+    "x": 1,
+    "y": 1
+  },
+  {
+    "x": 0,
+    "y": 1
+  }
 ];
 const WATER_POLY: NormPoint[] = [
   {
@@ -387,15 +461,31 @@ const WAY_DROP_ZONE: NormPoint[] = [
   }
 ];
 const GATE_POLY: NormPoint[] = [
-  { x: 0.74, y: 0.09 },
-  { x: 0.95, y: 0.12 },
-  { x: 0.93, y: 0.45 },
-  { x: 0.72, y: 0.41 },
+  {
+    "x": 0.74,
+    "y": 0.09
+  },
+  {
+    "x": 0.8510416666666667,
+    "y": 0.09840674789128398
+  },
+  {
+    "x": 0.8078125,
+    "y": 0.32146204311152765
+  },
+  {
+    "x": 0.7697916666666667,
+    "y": 0.3345829428303655
+  }
 ];
 
 const DEBUG_WATER_COLOR = 0x2f80ed;
 const DEBUG_WAY_COLOR = 0xf2994a;
 const DEBUG_STONE_COLOR = 0x9b8a6a;
+const DEBUG_ACTION_FORWARD_COLOR = 0xbb6bd9;
+const DEBUG_ACTION_BACK_COLOR = 0xeb5757;
+const DEBUG_ACTION_CANDLE_COLOR = 0xf2c94c;
+const DEBUG_ACTION_STONE_COLOR = 0x828282;
 const DEBUG_VANISHING_COLOR = 0xeb5757;
 const DEBUG_REFERENCE_COLOR = 0x27ae60;
 const GROUND_PERSPECTIVE: GroundPerspectiveConfig = {
@@ -418,6 +508,7 @@ interface HeldItem {
 }
 
 type DebugZoneKind = "water" | "way" | "stone";
+type ActionZoneKind = "forward" | "back" | "candle" | "stoneSource";
 
 type PresenceKind = "walking" | "kneeling" | "seated";
 
@@ -458,17 +549,28 @@ export class SpurenRoom implements Room {
   private waterPoly: NormPoint[] = WATER_POLY.map((p) => ({ ...p }));
   private wayDropZone: NormPoint[] = WAY_DROP_ZONE.map((p) => ({ ...p }));
   private stoneDropZones: NormPoint[][] = STONE_DROP_ZONES.map((poly) => poly.map((p) => ({ ...p })));
+  private forwardActionZone: NormPoint[] = GATE_POLY.map((p) => ({ ...p }));
+  private backActionZone: NormPoint[] = BACK_ACTION_POLY.map((p) => ({ ...p }));
+  private candleSourcePolys: NormPoint[][] = CANDLE_SOURCE_POLYS.map((poly) => poly.map((p) => ({ ...p })));
+  private stoneSourcePoly: NormPoint[] = STONE_SOURCE_POLY.map((p) => ({ ...p }));
   private debugOverlay: Graphics | null = null;
+  private actionDebugOverlay: Graphics | null = null;
   private perspectiveDebugOverlay: Graphics | null = null;
   private debugMode =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("debugZones");
+  private actionDebugMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("debugActionZones");
   private perspectiveDebugMode =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("debugPerspective");
   private activeZone: DebugZoneKind = "water";
   private activeStoneZoneIndex = 0;
   private draggingVertex: { zone: DebugZoneKind; zoneIndex?: number; index: number } | null = null;
+  private activeActionZone: ActionZoneKind = "forward";
+  private activeCandleSourceIndex = 0;
+  private draggingActionVertex: { zone: ActionZoneKind; zoneIndex?: number; index: number } | null = null;
   private activePerspectiveHandle: "vanishing" | "reference" = "vanishing";
   private draggingPerspectiveHandle: "vanishing" | "reference" | null = null;
   private lastPointerNorm: NormPoint = { x: 0.5, y: 0.5 };
@@ -534,6 +636,7 @@ export class SpurenRoom implements Room {
       const scale = Math.max(W / bgTex.width, H / bgTex.height);
       bg.scale.set(scale);
       this.drawDebugZones();
+      this.drawActionDebugZones();
       this.drawPerspectiveDebug();
     };
     fitBackground();
@@ -544,13 +647,19 @@ export class SpurenRoom implements Room {
       this.drawDebugZones();
       console.info("[debugZones] Controls: W=water, D=way, S/1-3=stone drop zone, A=add vertex at cursor, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
     }
+    if (this.actionDebugMode) {
+      this.actionDebugOverlay = new Graphics();
+      this.scene.layers.overlay.addChild(this.actionDebugOverlay);
+      this.drawActionDebugZones();
+      console.info("[debugActionZones] Controls: F=forward, B=back, C/1-3=candle source, T=stone source, A=add vertex, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
+    }
     if (this.perspectiveDebugMode) {
       this.perspectiveDebugOverlay = new Graphics();
       this.scene.layers.overlay.addChild(this.perspectiveDebugOverlay);
       this.drawPerspectiveDebug();
       console.info("[debugPerspective] Controls: V=vanishing, R=reference, drag marker, Arrow keys=nudge, O=print+copy");
     }
-    if (this.debugMode || this.perspectiveDebugMode) {
+    if (this.debugMode || this.actionDebugMode || this.perspectiveDebugMode) {
       window.addEventListener("keydown", this.keyHandler);
     }
 
@@ -565,6 +674,8 @@ export class SpurenRoom implements Room {
       dust.start();
       this.effects.push(dust);
     }
+
+    this.restorePlacedArtifacts();
 
     window.setTimeout(() => {
       if (!this.destroyed) this.spawnRandomPresence();
@@ -643,6 +754,8 @@ export class SpurenRoom implements Room {
 
     try { this.debugOverlay?.destroy(); } catch { /* ignore */ }
     this.debugOverlay = null;
+    try { this.actionDebugOverlay?.destroy(); } catch { /* ignore */ }
+    this.actionDebugOverlay = null;
     try { this.perspectiveDebugOverlay?.destroy(); } catch { /* ignore */ }
     this.perspectiveDebugOverlay = null;
 
@@ -673,6 +786,13 @@ export class SpurenRoom implements Room {
         return;
       }
     }
+    if (this.actionDebugMode) {
+      const hit = this.findActionDebugVertex(x, y, 14);
+      if (hit) {
+        this.draggingActionVertex = hit;
+        return;
+      }
+    }
     if (this.perspectiveDebugMode) {
       const handle = findPerspectiveHandleAtPixel(
         GROUND_PERSPECTIVE,
@@ -690,30 +810,30 @@ export class SpurenRoom implements Room {
       }
     }
 
-    if (this.scene.height > 0 && y / this.scene.height >= 0.85) {
-      this.backHoldStartedAt = performance.now();
-      this.backHoldFired = false;
+    if (this.isInPoly(x, y, this.backActionZone)) {
+      this.cb.onRequestBack?.();
+      return;
     }
 
-    if (this.exitOpen && this.isInPoly(x, y, GATE_POLY)) {
-      this.playGateCue(0.45);
+    if (this.isInPoly(x, y, this.forwardActionZone)) {
+      this.playGateCue(0.45, x, y);
       this.cb.onRequestForward?.();
       return;
     }
 
     if (this.held) return;
 
-    if (this.isInAnyPoly(x, y, CANDLE_SOURCE_POLYS)) {
+    if (this.isInAnyPoly(x, y, this.candleSourcePolys)) {
       this.pickUpCandle(x, y);
       return;
     }
-    if (this.isInPoly(x, y, STONE_SOURCE_POLY)) {
+    if (this.isInPoly(x, y, this.stoneSourcePoly)) {
       this.pickUpStone(x, y);
       return;
     }
     if (this.waterUnlocked && this.isInPoly(x, y, this.waterPoly)) {
       this.spawnWaterRipple(x, y, 0.62);
-      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, 0.5); } catch { /* still */ }
+      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, this.effectVolumeAtPoint(0.5, x, y)); } catch { /* still */ }
     }
   };
 
@@ -730,6 +850,14 @@ export class SpurenRoom implements Room {
       this.drawDebugZones();
       return;
     }
+    if (this.draggingActionVertex) {
+      const nx = clamp(x / this.scene.width, 0, 1);
+      const ny = clamp(y / this.scene.height, 0, 1);
+      const poly = this.actionDebugPolyForDrag(this.draggingActionVertex);
+      poly[this.draggingActionVertex.index] = { x: nx, y: ny };
+      this.drawActionDebugZones();
+      return;
+    }
     if (this.draggingPerspectiveHandle) {
       const nx = clamp(x / this.scene.width, 0, 1);
       const ny = clamp(y / this.scene.height, 0, 1);
@@ -738,15 +866,20 @@ export class SpurenRoom implements Room {
       return;
     }
 
-    if (this.backHoldStartedAt != null && this.scene.height > 0 && y / this.scene.height < 0.82) {
+    if (this.backHoldStartedAt != null && !this.isInPoly(x, y, this.backActionZone)) {
       this.backHoldStartedAt = null;
     }
 
     if (!this.held) return;
     this.held.node.x = x;
     this.held.node.y = y;
-    if (this.held.kind === "stone") this.held.node.scale.set(this.stoneScaleForPoint(x, y));
-    else this.held.node.scale.set(this.candleScaleForPoint(x, y));
+    if (this.held.kind === "stone") {
+      this.held.node.scale.set(this.stoneScaleForPoint(x, y));
+      this.held.node.alpha = this.isValidStoneDropAt(x, y) ? 0.95 : 0.38;
+    } else {
+      this.held.node.scale.set(this.candleScaleForPoint(x, y));
+      this.held.node.alpha = this.isValidCandleDropAt(x, y) ? 0.95 : 0.38;
+    }
   };
 
   private onStageUp = (ev: FederatedPointerEvent) => {
@@ -758,6 +891,10 @@ export class SpurenRoom implements Room {
       this.draggingPerspectiveHandle = null;
       return;
     }
+    if (this.draggingActionVertex) {
+      this.draggingActionVertex = null;
+      return;
+    }
     this.backHoldStartedAt = null;
     if (!this.held) return;
 
@@ -766,24 +903,24 @@ export class SpurenRoom implements Room {
     if (this.held.kind === "stone") {
       if (this.waterUnlocked && this.isInPoly(x, y, this.waterPoly)) {
         this.spawnWaterRipple(x, y, 0.95);
-        this.playStoneWaterCue();
+        this.playStoneWaterCue(x, y);
         this.addTrace("stone", x / this.scene.width, y / this.scene.height, 180);
         this.held.node.destroy({ children: true });
       } else {
-        if (this.isInPoly(x, y, this.wayDropZone)) {
-          this.placeGroundStone(this.held.node, x, y, 0.95, true, false);
+        if (this.isValidStoneDropAt(x, y)) {
+          this.placeGroundStone(this.held.node, x, y, 0.95, true, false, true);
         } else {
           this.held.node.destroy({ children: true });
         }
       }
     } else {
-      if (this.isInPoly(x, y, this.wayDropZone) && !this.isInPoly(x, y, this.waterPoly) && !this.isInAnyPoly(x, y, this.stoneDropZones)) {
-        const placed = this.placeGroundCandle(this.held.node, x, y, 1);
+      if (this.isValidCandleDropAt(x, y)) {
+        const placed = this.placeGroundCandle(this.held.node, x, y, 1, false, true);
         if (placed) {
           const flameScale = this.candleScaleForPoint(this.held.node.x, this.held.node.y);
           this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, null, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y), flameScale);
           this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, null);
-          try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
+          try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, this.effectVolumeAtPoint(0.5, this.held.node.x, this.held.node.y)); } catch { /* still */ }
         }
       } else {
         this.held.node.destroy({ children: true });
@@ -878,10 +1015,11 @@ export class SpurenRoom implements Room {
     alpha: number,
     withSound: boolean,
     foreign: boolean,
+    persist: boolean,
   ): void {
     const base = { x: x / this.scene.width, y: y / this.scene.height };
-    const point = this.resolveStonePlacementPoint(base, 0.045);
-    if (!point) {
+    const point = foreign ? this.resolveStonePlacementPoint(base, 0.045) : base;
+    if (!point || !this.isValidStonePoint(point)) {
       node.destroy({ children: true });
       return;
     }
@@ -890,19 +1028,17 @@ export class SpurenRoom implements Room {
     node.alpha = alpha;
     node.scale.set(this.stoneScaleForPoint(node.x, node.y) * (foreign ? 0.75 : 1));
     if (withSound) {
-      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, 0.5); } catch { /* still */ }
+      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, this.effectVolumeAtPoint(0.5, node.x, node.y)); } catch { /* still */ }
     }
     this.addTrace("stone", node.x / this.scene.width, node.y / this.scene.height, 240);
     this.rememberPlacedArtifact(node);
+    if (persist) this.persistPlacedArtifact("stone", node.x, node.y, alpha);
   }
 
-  private placeGroundCandle(node: Container, x: number, y: number, alpha: number): boolean {
+  private placeGroundCandle(node: Container, x: number, y: number, alpha: number, allowFallback = false, persist = false): boolean {
     const base = { x: x / this.scene.width, y: y / this.scene.height };
-    const preferred = this.isInPoly(x, y, this.wayDropZone)
-      ? base
-      : randomNearbyPointInPoly(this.wayDropZone, base, 0.03, this.waterPoly);
-    const point = this.resolveCandlePlacementPoint(preferred, 0.04);
-    if (!point) {
+    const point = allowFallback ? this.resolveCandlePlacementPoint(base, 0.04) : base;
+    if (!point || !this.isValidCandlePoint(point)) {
       node.destroy({ children: true });
       return false;
     }
@@ -911,6 +1047,7 @@ export class SpurenRoom implements Room {
     node.alpha = alpha;
     node.scale.set(this.candleScaleForPoint(node.x, node.y));
     this.rememberPlacedArtifact(node);
+    if (persist) this.persistPlacedArtifact("candle", node.x, node.y, alpha);
     return true;
   }
 
@@ -926,8 +1063,31 @@ export class SpurenRoom implements Room {
     return perspectiveGroundScaleAtPoint(x, y, this.scene.width, this.scene.height, GROUND_PERSPECTIVE);
   }
 
+  private effectVolumeAtPoint(baseIntensity: number, x: number, y: number): number {
+    const vanishing = GROUND_PERSPECTIVE.vanishingPoint;
+    const reference = GROUND_PERSPECTIVE.referencePoint;
+    const nx = this.scene.width > 0 ? x / this.scene.width : reference.x;
+    const ny = this.scene.height > 0 ? y / this.scene.height : reference.y;
+    const distance = Math.hypot(nx - vanishing.x, ny - vanishing.y);
+    const referenceDistance = Math.max(0.001, Math.hypot(reference.x - vanishing.x, reference.y - vanishing.y));
+    const depth = smoothstep(clamp(distance / referenceDistance, 0, 1));
+    return baseIntensity * (0.08 + depth * 0.92);
+  }
+
   private candleFlameOffsetForPoint(x: number, y: number): number {
     return Math.max(8, this.candleScaleForPoint(x, y) * 74);
+  }
+
+  private isValidStoneDropAt(x: number, y: number): boolean {
+    return this.scene.width > 0
+      && this.scene.height > 0
+      && this.isValidStonePoint({ x: x / this.scene.width, y: y / this.scene.height });
+  }
+
+  private isValidCandleDropAt(x: number, y: number): boolean {
+    return this.scene.width > 0
+      && this.scene.height > 0
+      && this.isValidCandlePoint({ x: x / this.scene.width, y: y / this.scene.height });
   }
 
   private attachCandleFlame(x: number, y: number, intensity: number, ttlSeconds: number | null, offsetY = 18, flameScale = 1): void {
@@ -976,7 +1136,7 @@ export class SpurenRoom implements Room {
   }
 
   private onKey(ev: KeyboardEvent): void {
-    if (!this.debugMode && !this.perspectiveDebugMode) return;
+    if (!this.debugMode && !this.actionDebugMode && !this.perspectiveDebugMode) return;
     if (this.perspectiveDebugMode) {
       if (ev.key.toLowerCase() === "v") {
         this.activePerspectiveHandle = "vanishing";
@@ -1011,6 +1171,67 @@ export class SpurenRoom implements Room {
       if (ev.key === "ArrowDown") {
         this.nudgePerspectiveHandle(0, step);
         ev.preventDefault();
+        return;
+      }
+    }
+    if (this.actionDebugMode) {
+      if (ev.key.toLowerCase() === "f") {
+        this.activeActionZone = "forward";
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key.toLowerCase() === "b") {
+        this.activeActionZone = "back";
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key.toLowerCase() === "c") {
+        this.activeActionZone = "candle";
+        this.ensureCandleSourcePoly(this.activeCandleSourceIndex);
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key.toLowerCase() === "t") {
+        this.activeActionZone = "stoneSource";
+        this.drawActionDebugZones();
+        return;
+      }
+      if (/^[1-3]$/.test(ev.key)) {
+        this.activeActionZone = "candle";
+        this.activeCandleSourceIndex = Number(ev.key) - 1;
+        this.ensureCandleSourcePoly(this.activeCandleSourceIndex);
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key.toLowerCase() === "a") {
+        const poly = this.activeActionDebugPoly();
+        poly.push({ ...this.lastPointerNorm });
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key.toLowerCase() === "n") {
+        const poly = this.activeActionDebugPoly();
+        insertPointOnNearestEdge(poly, this.lastPointerNorm);
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key.toLowerCase() === "m") {
+        const poly = this.activeActionDebugPoly();
+        subdividePoly(poly);
+        this.drawActionDebugZones();
+        return;
+      }
+      if (ev.key === "Backspace" || ev.key === "Delete") {
+        const poly = this.activeActionDebugPoly();
+        if (poly.length <= 3) return;
+        const idx = nearestVertexIndex(this.lastPointerNorm, poly);
+        poly.splice(idx, 1);
+        this.drawActionDebugZones();
+        ev.preventDefault();
+        return;
+      }
+      if (ev.key.toLowerCase() === "p") {
+        this.exportActionDebugPolys();
         return;
       }
     }
@@ -1125,6 +1346,48 @@ export class SpurenRoom implements Room {
     return null;
   }
 
+  private activeActionDebugPoly(): NormPoint[] {
+    if (this.activeActionZone === "forward") return this.forwardActionZone;
+    if (this.activeActionZone === "back") return this.backActionZone;
+    if (this.activeActionZone === "stoneSource") return this.stoneSourcePoly;
+    this.ensureCandleSourcePoly(this.activeCandleSourceIndex);
+    return this.candleSourcePolys[this.activeCandleSourceIndex];
+  }
+
+  private actionDebugPolyForDrag(hit: { zone: ActionZoneKind; zoneIndex?: number }): NormPoint[] {
+    if (hit.zone === "forward") return this.forwardActionZone;
+    if (hit.zone === "back") return this.backActionZone;
+    if (hit.zone === "stoneSource") return this.stoneSourcePoly;
+    this.ensureCandleSourcePoly(hit.zoneIndex ?? 0);
+    return this.candleSourcePolys[hit.zoneIndex ?? 0];
+  }
+
+  private ensureCandleSourcePoly(index: number): void {
+    while (this.candleSourcePolys.length <= index) {
+      this.candleSourcePolys.push(createRectPolyAround(this.lastPointerNorm, 0.05, 0.06));
+    }
+  }
+
+  private findActionDebugVertex(x: number, y: number, thresholdPx: number): { zone: ActionZoneKind; zoneIndex?: number; index: number } | null {
+    const active = this.findVertexInPoly(this.activeActionDebugPoly(), x, y, thresholdPx);
+    if (active != null) {
+      return this.activeActionZone === "candle"
+        ? { zone: "candle", zoneIndex: this.activeCandleSourceIndex, index: active }
+        : { zone: this.activeActionZone, index: active };
+    }
+    const forward = this.findVertexInPoly(this.forwardActionZone, x, y, thresholdPx);
+    if (forward != null) return { zone: "forward", index: forward };
+    const back = this.findVertexInPoly(this.backActionZone, x, y, thresholdPx);
+    if (back != null) return { zone: "back", index: back };
+    const stoneSource = this.findVertexInPoly(this.stoneSourcePoly, x, y, thresholdPx);
+    if (stoneSource != null) return { zone: "stoneSource", index: stoneSource };
+    for (let zoneIndex = 0; zoneIndex < this.candleSourcePolys.length; zoneIndex++) {
+      const candle = this.findVertexInPoly(this.candleSourcePolys[zoneIndex], x, y, thresholdPx);
+      if (candle != null) return { zone: "candle", zoneIndex, index: candle };
+    }
+    return null;
+  }
+
   private drawDebugZones(): void {
     if (!this.debugMode || !this.debugOverlay) return;
     const g = this.debugOverlay;
@@ -1137,6 +1400,23 @@ export class SpurenRoom implements Room {
         this.toPixels(this.stoneDropZones[i]),
         DEBUG_STONE_COLOR,
         this.activeZone === "stone" && this.activeStoneZoneIndex === i,
+      );
+    }
+  }
+
+  private drawActionDebugZones(): void {
+    if (!this.actionDebugMode || !this.actionDebugOverlay) return;
+    const g = this.actionDebugOverlay;
+    g.clear();
+    drawPolyOverlay(g, this.toPixels(this.forwardActionZone), DEBUG_ACTION_FORWARD_COLOR, this.activeActionZone === "forward");
+    drawPolyOverlay(g, this.toPixels(this.backActionZone), DEBUG_ACTION_BACK_COLOR, this.activeActionZone === "back");
+    drawPolyOverlay(g, this.toPixels(this.stoneSourcePoly), DEBUG_ACTION_STONE_COLOR, this.activeActionZone === "stoneSource");
+    for (let i = 0; i < this.candleSourcePolys.length; i++) {
+      drawPolyOverlay(
+        g,
+        this.toPixels(this.candleSourcePolys[i]),
+        DEBUG_ACTION_CANDLE_COLOR,
+        this.activeActionZone === "candle" && this.activeCandleSourceIndex === i,
       );
     }
   }
@@ -1182,28 +1462,42 @@ export class SpurenRoom implements Room {
     }
   }
 
-  private playGateCue(intensity: number): void {
+  private exportActionDebugPolys(): void {
+    const text = [
+      "const GATE_POLY: NormPoint[] = " + JSON.stringify(this.forwardActionZone, null, 2) + ";",
+      "const BACK_ACTION_POLY: NormPoint[] = " + JSON.stringify(this.backActionZone, null, 2) + ";",
+      "const STONE_SOURCE_POLY: NormPoint[] = " + JSON.stringify(this.stoneSourcePoly, null, 2) + ";",
+      "const CANDLE_SOURCE_POLYS: NormPoint[][] = " + JSON.stringify(this.candleSourcePolys, null, 2) + ";",
+    ].join("\n\n");
+    console.log(text);
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => undefined);
+    }
+  }
+
+  private playGateCue(intensity: number, x: number, y: number): void {
+    const localIntensity = this.effectVolumeAtPoint(intensity, x, y);
     // Fallback-Kette: je nach lokal vorhandenen Dateien kann `stone_drop`
     // fehlen. So hat die Tor-Öffnung dennoch eine akustische Quittung.
     try {
-      audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, intensity);
+      audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, localIntensity);
       return;
     } catch { /* noop */ }
     try {
-      audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, intensity);
+      audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, localIntensity);
       return;
     } catch { /* noop */ }
     try {
-      audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, intensity);
+      audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, localIntensity);
     } catch { /* noop */ }
   }
 
-  private playStoneWaterCue(): void {
+  private playStoneWaterCue(x: number, y: number): void {
     try {
-      audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, 0.55);
+      audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, this.effectVolumeAtPoint(0.55, x, y));
     } catch { /* noop */ }
     try {
-      audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, 0.45);
+      audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, this.effectVolumeAtPoint(0.45, x, y));
     } catch { /* noop */ }
   }
 
@@ -1346,6 +1640,7 @@ export class SpurenRoom implements Room {
       }
 
       if (p.ageMs >= total) {
+        try { audioEngine.playOneShot(SPUREN_ASSETS.audio.hush, this.effectVolumeAtPoint(0.42, p.node.x, p.node.y)); } catch { /* still */ }
         try { p.node.destroy({ children: true }); } catch { /* ignore */ }
         return false;
       }
@@ -1356,13 +1651,13 @@ export class SpurenRoom implements Room {
   private leaveForeignStone(x: number, y: number): void {
     const stone = this.createStoneNode();
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(stone);
-    this.placeGroundStone(stone, x, y, 0.72, true, true);
+    this.placeGroundStone(stone, x, y, 0.72, true, true, true);
   }
 
   private leaveForeignCandle(x: number, y: number): void {
     const candle = this.createCandleNode();
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(candle);
-    if (!this.placeGroundCandle(candle, x, y, 0.82)) return;
+    if (!this.placeGroundCandle(candle, x, y, 0.82, true, true)) return;
     candle.scale.set(candle.scale.x * 0.88, candle.scale.y * 0.88);
     this.attachCandleFlame(
       candle.x,
@@ -1372,8 +1667,42 @@ export class SpurenRoom implements Room {
       this.candleFlameOffsetForPoint(candle.x, candle.y) * 0.88,
       this.candleScaleForPoint(candle.x, candle.y) * 0.88,
     );
-    try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
+    try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, this.effectVolumeAtPoint(0.5, candle.x, candle.y)); } catch { /* still */ }
     this.addTrace("candle", candle.x / this.scene.width, candle.y / this.scene.height, null);
+  }
+
+  private restorePlacedArtifacts(): void {
+    const artifacts = useStore.getState().placedArtifacts;
+    for (const artifact of artifacts) {
+      this.restorePlacedArtifact(artifact);
+    }
+  }
+
+  private restorePlacedArtifact(artifact: PlacedArtifact): void {
+    const x = artifact.x * this.scene.width;
+    const y = artifact.y * this.scene.height;
+    const node = artifact.kind === "stone" ? this.createStoneNode() : this.createCandleNode();
+    (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(node);
+    node.x = x;
+    node.y = y;
+    node.alpha = artifact.alpha;
+    node.scale.set(artifact.kind === "stone" ? this.stoneScaleForPoint(x, y) : this.candleScaleForPoint(x, y));
+    this.rememberPlacedArtifact(node);
+    if (artifact.kind === "candle") {
+      const flameScale = this.candleScaleForPoint(x, y);
+      this.attachCandleFlame(x, y, 0.62, null, this.candleFlameOffsetForPoint(x, y), flameScale);
+    }
+  }
+
+  private persistPlacedArtifact(kind: PlacedArtifact["kind"], x: number, y: number, alpha: number): void {
+    useStore.getState().addPlacedArtifact({
+      id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      kind,
+      x: x / this.scene.width,
+      y: y / this.scene.height,
+      alpha,
+      createdAt: Date.now(),
+    });
   }
 
   private rememberPlacedArtifact(node: Container): void {
@@ -1630,6 +1959,19 @@ function distancePointToSegment(p: NormPoint, a: NormPoint, b: NormPoint): numbe
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function smoothstep(value: number): number {
+  return value * value * (3 - 2 * value);
+}
+
+function createRectPolyAround(center: NormPoint, halfWidth: number, halfHeight: number): NormPoint[] {
+  return [
+    { x: clamp(center.x - halfWidth, 0, 1), y: clamp(center.y - halfHeight, 0, 1) },
+    { x: clamp(center.x + halfWidth, 0, 1), y: clamp(center.y - halfHeight, 0, 1) },
+    { x: clamp(center.x + halfWidth, 0, 1), y: clamp(center.y + halfHeight, 0, 1) },
+    { x: clamp(center.x - halfWidth, 0, 1), y: clamp(center.y + halfHeight, 0, 1) },
+  ];
 }
 
 function randomRange(min: number, max: number): number {

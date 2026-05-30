@@ -13,6 +13,15 @@ export interface LocalTrace {
   createdAt: number;
 }
 
+export interface PlacedArtifact {
+  id: string;
+  kind: "candle" | "stone";
+  x: number;
+  y: number;
+  alpha: number;
+  createdAt: number;
+}
+
 export type RoomId = "vorhof" | "spuren" | "hoeren";
 
 interface State {
@@ -24,6 +33,8 @@ interface State {
   dwellSeconds: number;
   /** Lokale Spuren des aktuellen Raums. */
   traces: LocalTrace[];
+  /** Dauerhaft gesetzte Artefakte im Spuren-Raum. */
+  placedArtifacts: PlacedArtifact[];
   /** Audio-Master-Volume 0..1. */
   volume: number;
   /** Globaler Mute. */
@@ -39,6 +50,8 @@ interface Actions {
   tickDwell: (deltaSeconds: number) => void;
   addTrace: (t: LocalTrace) => void;
   removeTrace: (id: string) => void;
+  addPlacedArtifact: (artifact: PlacedArtifact) => void;
+  clearPlacedArtifacts: () => void;
   setVolume: (v: number) => void;
   setMuted: (m: boolean) => void;
   setPaused: (p: boolean) => void;
@@ -52,6 +65,7 @@ export const useStore = create<State & Actions>((set) => ({
   visited: new Set(["vorhof"]),
   dwellSeconds: 0,
   traces: [],
+  placedArtifacts: [],
   volume: 0.65,
   muted: false,
   paused: false,
@@ -64,7 +78,7 @@ export const useStore = create<State & Actions>((set) => ({
     set((s) => {
       const visited = new Set(s.visited);
       visited.add(room);
-      return { room, visited, dwellSeconds: 0, traces: [] };
+      return { room, visited, dwellSeconds: 0 };
     }),
 
   tickDwell: (delta) =>
@@ -73,6 +87,9 @@ export const useStore = create<State & Actions>((set) => ({
   addTrace: (t) => set((s) => ({ traces: [...s.traces, t] })),
 
   removeTrace: (id) => set((s) => ({ traces: s.traces.filter((x) => x.id !== id) })),
+
+  addPlacedArtifact: (artifact) => set((s) => ({ placedArtifacts: [...s.placedArtifacts, artifact] })),
+  clearPlacedArtifacts: () => set({ placedArtifacts: [] }),
 
   setVolume: (v) => set({ volume: Math.max(0, Math.min(1, v)) }),
   setMuted: (m) => set({ muted: m }),
@@ -83,6 +100,6 @@ export const useStore = create<State & Actions>((set) => ({
     set((s) => {
       const visited = new Set(s.visited);
       visited.add("vorhof");
-      return { room: "vorhof", visited, dwellSeconds: 0, traces: [] };
+      return { room: "vorhof", visited, dwellSeconds: 0 };
     }),
 }));
