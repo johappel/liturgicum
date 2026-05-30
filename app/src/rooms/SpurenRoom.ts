@@ -1,6 +1,15 @@
 import { Assets, Container, Graphics, Sprite, Texture, type FederatedPointerEvent } from "pixi.js";
 import type { Scene } from "../scene/Scene";
 import type { NormPoint } from "../scene/layout";
+import {
+  drawPerspectiveDebugOverlay,
+  exportPerspectiveConfigConst,
+  findPerspectiveHandleAtPixel,
+  nudgePerspectiveHandle as nudgePerspectiveHandleConfig,
+  perspectiveGroundScaleAtPoint,
+  setPerspectiveHandlePoint,
+  type GroundPerspectiveConfig,
+} from "../scene/perspectiveDebug";
 import { SPUREN_ASSETS } from "../assets/manifest";
 import { useStore, type LocalTrace } from "../state/store";
 import { audioEngine } from "../audio/AudioEngine";
@@ -98,11 +107,15 @@ const GATE_POLY: NormPoint[] = [
 
 const DEBUG_WATER_COLOR = 0x2f80ed;
 const DEBUG_WAY_COLOR = 0xf2994a;
-const GROUND_PERSPECTIVE = {
-  horizonY: 0.28,
-  nearY: 0.88,
-  minScale: 0.025,
-  nearScale: 0.74,
+const DEBUG_VANISHING_COLOR = 0xeb5757;
+const DEBUG_REFERENCE_COLOR = 0x27ae60;
+const GROUND_PERSPECTIVE: GroundPerspectiveConfig = {
+  // Manuell kalibrierter Fluchtpunkt (normierte Bildschirmkoordinaten).
+  // Entlang dieses Strahls wird die scheinbare Objektgroesse berechnet.
+  vanishingPoint: {"x":0.7942708333333334,"y":0.26522961574507964},
+  referencePoint: {"x":0.5307291666666667,"y":0.9700093720712277},
+  minScale: 0.0025,
+  nearScale: 0.89
 };
 const PRESENCE_BASE_HEIGHT: Record<PresenceKind, number> = {
   walking: 460,
@@ -154,11 +167,17 @@ export class SpurenRoom implements Room {
   private waterPoly: NormPoint[] = WATER_POLY.map((p) => ({ ...p }));
   private wayDropZone: NormPoint[] = WAY_DROP_ZONE.map((p) => ({ ...p }));
   private debugOverlay: Graphics | null = null;
+  private perspectiveDebugOverlay: Graphics | null = null;
   private debugMode =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("debugZones");
+  private perspectiveDebugMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("debugPerspective");
   private activeZone: "water" | "way" = "water";
   private draggingVertex: { zone: "water" | "way"; index: number } | null = null;
+  private activePerspectiveHandle: "vanishing" | "reference" = "vanishing";
+  private draggingPerspectiveHandle: "vanishing" | "reference" | null = null;
   private lastPointerNorm: NormPoint = { x: 0.5, y: 0.5 };
 
   private held: HeldItem | null = null;
@@ -218,6 +237,7 @@ export class SpurenRoom implements Room {
       const scale = Math.max(W / bgTex.width, H / bgTex.height);
       bg.scale.set(scale);
       this.drawDebugZones();
+      this.drawPerspectiveDebug();
     };
     fitBackground();
 
@@ -225,8 +245,16 @@ export class SpurenRoom implements Room {
       this.debugOverlay = new Graphics();
       this.scene.layers.overlay.addChild(this.debugOverlay);
       this.drawDebugZones();
-      window.addEventListener("keydown", this.keyHandler);
       console.info("[debugZones] Controls: W=water, D=way, A=add vertex at cursor, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
+    }
+    if (this.perspectiveDebugMode) {
+      this.perspectiveDebugOverlay = new Graphics();
+      this.scene.layers.overlay.addChild(this.perspectiveDebugOverlay);
+      this.drawPerspectiveDebug();
+      console.info("[debugPerspective] Controls: V=vanishing, R=reference, drag marker, Arrow keys=nudge, O=print+copy");
+    }
+    if (this.debugMode || this.perspectiveDebugMode) {
+      window.addEventListener("keydown", this.keyHandler);
     }
 
     if (!reduced) {
@@ -318,6 +346,8 @@ export class SpurenRoom implements Room {
 
     try { this.debugOverlay?.destroy(); } catch { /* ignore */ }
     this.debugOverlay = null;
+    try { this.perspectiveDebugOverlay?.destroy(); } catch { /* ignore */ }
+    this.perspectiveDebugOverlay = null;
 
     for (const c of this.ownedContainers) {
       try { c.destroy({ children: true }); } catch { /* ignore */ }
@@ -343,6 +373,22 @@ export class SpurenRoom implements Room {
       const hit = this.findDebugVertex(x, y, 14);
       if (hit) {
         this.draggingVertex = hit;
+        return;
+      }
+    }
+    if (this.perspectiveDebugMode) {
+      const handle = findPerspectiveHandleAtPixel(
+        GROUND_PERSPECTIVE,
+        this.scene.width,
+        this.scene.height,
+        x,
+        y,
+        18,
+      );
+      if (handle) {
+        this.draggingPerspectiveHandle = handle;
+        this.activePerspectiveHandle = handle;
+        this.drawPerspectiveDebug();
         return;
       }
     }
@@ -387,6 +433,13 @@ export class SpurenRoom implements Room {
       this.drawDebugZones();
       return;
     }
+    if (this.draggingPerspectiveHandle) {
+      const nx = clamp(x / this.scene.width, 0, 1);
+      const ny = clamp(y / this.scene.height, 0, 1);
+      setPerspectiveHandlePoint(GROUND_PERSPECTIVE, this.draggingPerspectiveHandle, { x: nx, y: ny });
+      this.drawPerspectiveDebug();
+      return;
+    }
 
     if (this.backHoldStartedAt != null && this.scene.height > 0 && y / this.scene.height < 0.82) {
       this.backHoldStartedAt = null;
@@ -395,13 +448,17 @@ export class SpurenRoom implements Room {
     if (!this.held) return;
     this.held.node.x = x;
     this.held.node.y = y;
-    if (this.held.kind === "stone") this.held.node.scale.set(this.stoneScaleForY(y));
-    else this.held.node.scale.set(this.candleScaleForY(y));
+    if (this.held.kind === "stone") this.held.node.scale.set(this.stoneScaleForPoint(x, y));
+    else this.held.node.scale.set(this.candleScaleForPoint(x, y));
   };
 
   private onStageUp = (ev: FederatedPointerEvent) => {
     if (this.draggingVertex) {
       this.draggingVertex = null;
+      return;
+    }
+    if (this.draggingPerspectiveHandle) {
+      this.draggingPerspectiveHandle = null;
       return;
     }
     this.backHoldStartedAt = null;
@@ -425,7 +482,7 @@ export class SpurenRoom implements Room {
     } else {
       if (this.isInPoly(x, y, this.wayDropZone) && !this.isInPoly(x, y, this.waterPoly)) {
         this.placeGroundCandle(this.held.node, x, y, 1);
-        this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, 180, this.candleFlameOffsetForY(this.held.node.y));
+        this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, 180, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y));
         this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, 180);
         try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
       } else {
@@ -441,7 +498,7 @@ export class SpurenRoom implements Room {
     node.x = x;
     node.y = y;
     node.alpha = 0.95;
-    node.scale.set(this.stoneScaleForY(y));
+    node.scale.set(this.stoneScaleForPoint(x, y));
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(node);
     this.held = { kind: "stone", node };
   }
@@ -451,7 +508,7 @@ export class SpurenRoom implements Room {
     node.x = x;
     node.y = y;
     node.alpha = 0.95;
-    node.scale.set(this.candleScaleForY(y));
+    node.scale.set(this.candleScaleForPoint(x, y));
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(node);
     this.held = { kind: "candle", node };
   }
@@ -516,7 +573,7 @@ export class SpurenRoom implements Room {
     node.x = point.x * this.scene.width;
     node.y = point.y * this.scene.height;
     node.alpha = alpha;
-    node.scale.set(this.stoneScaleForY(node.y) * (foreign ? 0.75 : 1));
+    node.scale.set(this.stoneScaleForPoint(node.x, node.y) * (foreign ? 0.75 : 1));
     if (withSound) {
       try { audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, 0.5); } catch { /* still */ }
     }
@@ -532,23 +589,23 @@ export class SpurenRoom implements Room {
     node.x = point.x * this.scene.width;
     node.y = point.y * this.scene.height;
     node.alpha = alpha;
-    node.scale.set(this.candleScaleForY(node.y));
+    node.scale.set(this.candleScaleForPoint(node.x, node.y));
   }
 
-  private stoneScaleForY(y: number): number {
-    return perspectiveGroundScaleForY(y, this.scene.height, GROUND_PERSPECTIVE);
+  private stoneScaleForPoint(x: number, y: number): number {
+    return perspectiveGroundScaleAtPoint(x, y, this.scene.width, this.scene.height, GROUND_PERSPECTIVE);
   }
 
-  private candleScaleForY(y: number): number {
-    return perspectiveGroundScaleForY(y, this.scene.height, GROUND_PERSPECTIVE) * 0.95;
+  private candleScaleForPoint(x: number, y: number): number {
+    return perspectiveGroundScaleAtPoint(x, y, this.scene.width, this.scene.height, GROUND_PERSPECTIVE) * 0.95;
   }
 
-  private presenceScaleForY(y: number): number {
-    return perspectiveGroundScaleForY(y, this.scene.height, GROUND_PERSPECTIVE);
+  private presenceScaleForPoint(x: number, y: number): number {
+    return perspectiveGroundScaleAtPoint(x, y, this.scene.width, this.scene.height, GROUND_PERSPECTIVE);
   }
 
-  private candleFlameOffsetForY(y: number): number {
-    return Math.max(8, this.candleScaleForY(y) * 74);
+  private candleFlameOffsetForPoint(x: number, y: number): number {
+    return Math.max(8, this.candleScaleForPoint(x, y) * 74);
   }
 
   private attachCandleFlame(x: number, y: number, intensity: number, ttlSeconds: number, offsetY = 18): void {
@@ -596,6 +653,44 @@ export class SpurenRoom implements Room {
   }
 
   private onKey(ev: KeyboardEvent): void {
+    if (!this.debugMode && !this.perspectiveDebugMode) return;
+    if (this.perspectiveDebugMode) {
+      if (ev.key.toLowerCase() === "v") {
+        this.activePerspectiveHandle = "vanishing";
+        this.drawPerspectiveDebug();
+        return;
+      }
+      if (ev.key.toLowerCase() === "r") {
+        this.activePerspectiveHandle = "reference";
+        this.drawPerspectiveDebug();
+        return;
+      }
+      if (ev.key.toLowerCase() === "o") {
+        this.exportPerspectiveDebug();
+        return;
+      }
+      const step = ev.shiftKey ? 0.01 : 0.002;
+      if (ev.key === "ArrowLeft") {
+        this.nudgePerspectiveHandle(-step, 0);
+        ev.preventDefault();
+        return;
+      }
+      if (ev.key === "ArrowRight") {
+        this.nudgePerspectiveHandle(step, 0);
+        ev.preventDefault();
+        return;
+      }
+      if (ev.key === "ArrowUp") {
+        this.nudgePerspectiveHandle(0, -step);
+        ev.preventDefault();
+        return;
+      }
+      if (ev.key === "ArrowDown") {
+        this.nudgePerspectiveHandle(0, step);
+        ev.preventDefault();
+        return;
+      }
+    }
     if (!this.debugMode) return;
     if (ev.key.toLowerCase() === "w") {
       this.activeZone = "water";
@@ -662,6 +757,35 @@ export class SpurenRoom implements Room {
     g.clear();
     drawPolyOverlay(g, this.toPixels(this.waterPoly), DEBUG_WATER_COLOR, this.activeZone === "water");
     drawPolyOverlay(g, this.toPixels(this.wayDropZone), DEBUG_WAY_COLOR, this.activeZone === "way");
+  }
+
+  private drawPerspectiveDebug(): void {
+    if (!this.perspectiveDebugMode || !this.perspectiveDebugOverlay) return;
+    drawPerspectiveDebugOverlay(
+      this.perspectiveDebugOverlay,
+      this.scene.width,
+      this.scene.height,
+      GROUND_PERSPECTIVE,
+      this.activePerspectiveHandle,
+      {
+        line: 0xffffff,
+        vanishing: DEBUG_VANISHING_COLOR,
+        reference: DEBUG_REFERENCE_COLOR,
+      },
+    );
+  }
+
+  private nudgePerspectiveHandle(dx: number, dy: number): void {
+    nudgePerspectiveHandleConfig(GROUND_PERSPECTIVE, this.activePerspectiveHandle, dx, dy);
+    this.drawPerspectiveDebug();
+  }
+
+  private exportPerspectiveDebug(): void {
+    const text = exportPerspectiveConfigConst(GROUND_PERSPECTIVE, "GROUND_PERSPECTIVE");
+    console.log(text);
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => undefined);
+    }
   }
 
   private exportDebugPolys(): void {
@@ -732,7 +856,7 @@ export class SpurenRoom implements Room {
     node.x = start.x;
     node.y = start.y;
     node.alpha = 0;
-    node.scale.set(this.presenceScaleForY(start.y));
+    node.scale.set(this.presenceScaleForPoint(start.x, start.y));
     this.scene.layers.parallax_mid.addChild(node);
 
     const actor: PresenceActor = {
@@ -740,8 +864,8 @@ export class SpurenRoom implements Room {
       node,
       ageMs: 0,
       fadeInMs: kind === "walking" ? 400 : 450,
-      holdMs: kind === "walking" ? 2200 + Math.random() * 600 : 1500 + Math.random() * 800,
-      fadeOutMs: kind === "walking" ? 650 : 550,
+      holdMs: kind === "walking" ? 50 + Math.random() * 600 : 1500 + Math.random() * 800,
+      fadeOutMs: kind === "walking" ? 950 : 550,
       zone,
       start,
       end,
@@ -822,7 +946,7 @@ export class SpurenRoom implements Room {
       if (p.kind === "walking") {
         p.node.x = p.start.x + (p.end.x - p.start.x) * t;
         p.node.y = p.start.y + (p.end.y - p.start.y) * t;
-        p.node.scale.set(this.presenceScaleForY(p.node.y));
+        p.node.scale.set(this.presenceScaleForPoint(p.node.x, p.node.y));
       }
 
       if (p.ageMs < p.fadeInMs) {
@@ -853,7 +977,7 @@ export class SpurenRoom implements Room {
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(candle);
     this.placeGroundCandle(candle, x, y, 0.82);
     candle.scale.set(candle.scale.x * 0.88, candle.scale.y * 0.88);
-    this.attachCandleFlame(candle.x, candle.y, 0.42, 220, this.candleFlameOffsetForY(candle.y) * 0.88);
+    this.attachCandleFlame(candle.x, candle.y, 0.42, 220, this.candleFlameOffsetForPoint(candle.x, candle.y) * 0.88);
     try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
     this.addTrace("candle", candle.x / this.scene.width, candle.y / this.scene.height, 220);
     this.pushForeignArtifact(candle);
@@ -1041,20 +1165,6 @@ function distancePointToSegment(p: NormPoint, a: NormPoint, b: NormPoint): numbe
   const qx = a.x + abx * t;
   const qy = a.y + aby * t;
   return Math.hypot(p.x - qx, p.y - qy);
-}
-
-function perspectiveGroundScaleForY(
-  y: number,
-  sceneHeight: number,
-  perspective: { horizonY: number; nearY: number; minScale: number; nearScale: number },
-): number {
-  const ny = y / Math.max(sceneHeight, 1);
-  const depth = clamp(
-    (ny - perspective.horizonY) / (perspective.nearY - perspective.horizonY),
-    0,
-    1,
-  );
-  return perspective.minScale + depth * (perspective.nearScale - perspective.minScale);
 }
 
 function clamp(value: number, min: number, max: number): number {
