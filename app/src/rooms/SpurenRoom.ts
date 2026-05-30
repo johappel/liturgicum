@@ -24,6 +24,7 @@ import type { Room } from "./Room";
 const RIPE_AMBIENT_S = 45;
 const RIPE_EXIT_S = 90;
 const BACK_HOLD_MS = 1500;
+const MIN_ARTIFACT_DISTANCE_NORM = 0.045;
 
 const STONE_SOURCE_POLY: NormPoint[] = [
   // Sichtbare lose Steine im unteren Bilddrittel, vor dem Wasser.
@@ -182,7 +183,7 @@ export class SpurenRoom implements Room {
 
   private held: HeldItem | null = null;
   private presences: PresenceActor[] = [];
-  private foreignArtifacts: Container[] = [];
+  private placedArtifacts: Container[] = [];
 
   private exitOpen = false;
   private ambientDenser = false;
@@ -334,10 +335,10 @@ export class SpurenRoom implements Room {
       try { p.node.destroy({ children: true }); } catch { /* ignore */ }
     }
     this.presences = [];
-    for (const node of this.foreignArtifacts) {
+    for (const node of this.placedArtifacts) {
       try { node.destroy({ children: true }); } catch { /* ignore */ }
     }
-    this.foreignArtifacts = [];
+    this.placedArtifacts = [];
 
     for (const e of this.effects) {
       try { e.destroy(); } catch { /* ignore */ }
@@ -481,10 +482,13 @@ export class SpurenRoom implements Room {
       }
     } else {
       if (this.isInPoly(x, y, this.wayDropZone) && !this.isInPoly(x, y, this.waterPoly)) {
-        this.placeGroundCandle(this.held.node, x, y, 1);
-        this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, 180, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y));
-        this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, 180);
-        try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
+        const placed = this.placeGroundCandle(this.held.node, x, y, 1);
+        if (placed) {
+          const flameScale = this.candleScaleForPoint(this.held.node.x, this.held.node.y);
+          this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, 180, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y), flameScale);
+          this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, 180);
+          try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
+        }
       } else {
         this.held.node.destroy({ children: true });
       }
@@ -542,18 +546,23 @@ export class SpurenRoom implements Room {
     const c = new Container();
     const shadow = new Graphics();
     shadow.ellipse(0, 0, 18, 5).fill({ color: 0x050403, alpha: 0.26 });
+    const heightFactor = 0.84 + Math.random() * 0.34;
+    const widthFactor = 0.82 + Math.random() * 0.34;
     if (this.candleTexture) {
       const candle = new Sprite(this.candleTexture);
       candle.anchor.set(0.5, 1);
-      const targetHeight = 82;
+      const targetHeight = 82 * heightFactor;
       candle.scale.set(targetHeight / Math.max(this.candleTexture.height, 1));
+      candle.scale.x *= widthFactor;
       c.addChild(shadow, candle);
       return c;
     }
     const body = new Graphics();
-    body.roundRect(-6, -16, 12, 22, 4).fill({ color: 0xf4e0ba, alpha: 0.94 });
+    const bodyWidth = 12 * widthFactor;
+    const bodyHeight = 22 * heightFactor;
+    body.roundRect(-bodyWidth / 2, -bodyHeight + 6, bodyWidth, bodyHeight, 4).fill({ color: 0xf4e0ba, alpha: 0.94 });
     const wick = new Graphics();
-    wick.roundRect(-1, -20, 2, 5, 1).fill({ color: 0x2c2418, alpha: 0.9 });
+    wick.roundRect(-1, -bodyHeight - 2, 2, 5, 1).fill({ color: 0x2c2418, alpha: 0.9 });
     c.addChild(shadow, body, wick);
     return c;
   }
@@ -567,9 +576,14 @@ export class SpurenRoom implements Room {
     foreign: boolean,
   ): void {
     const base = { x: x / this.scene.width, y: y / this.scene.height };
-    const point = this.isInPoly(x, y, this.wayDropZone)
+    const preferred = this.isInPoly(x, y, this.wayDropZone)
       ? base
       : randomNearbyPointInPoly(this.wayDropZone, base, 0.03, this.waterPoly);
+    const point = this.resolveArtifactPlacementPoint(preferred, 0.045);
+    if (!point) {
+      node.destroy({ children: true });
+      return;
+    }
     node.x = point.x * this.scene.width;
     node.y = point.y * this.scene.height;
     node.alpha = alpha;
@@ -578,18 +592,25 @@ export class SpurenRoom implements Room {
       try { audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, 0.5); } catch { /* still */ }
     }
     this.addTrace("stone", node.x / this.scene.width, node.y / this.scene.height, 240);
-    if (foreign) this.pushForeignArtifact(node);
+    this.rememberPlacedArtifact(node);
   }
 
-  private placeGroundCandle(node: Container, x: number, y: number, alpha: number): void {
+  private placeGroundCandle(node: Container, x: number, y: number, alpha: number): boolean {
     const base = { x: x / this.scene.width, y: y / this.scene.height };
-    const point = this.isInPoly(x, y, this.wayDropZone)
+    const preferred = this.isInPoly(x, y, this.wayDropZone)
       ? base
       : randomNearbyPointInPoly(this.wayDropZone, base, 0.03, this.waterPoly);
+    const point = this.resolveArtifactPlacementPoint(preferred, 0.04);
+    if (!point) {
+      node.destroy({ children: true });
+      return false;
+    }
     node.x = point.x * this.scene.width;
     node.y = point.y * this.scene.height;
     node.alpha = alpha;
     node.scale.set(this.candleScaleForPoint(node.x, node.y));
+    this.rememberPlacedArtifact(node);
+    return true;
   }
 
   private stoneScaleForPoint(x: number, y: number): number {
@@ -608,11 +629,12 @@ export class SpurenRoom implements Room {
     return Math.max(8, this.candleScaleForPoint(x, y) * 74);
   }
 
-  private attachCandleFlame(x: number, y: number, intensity: number, ttlSeconds: number, offsetY = 18): void {
+  private attachCandleFlame(x: number, y: number, intensity: number, ttlSeconds: number, offsetY = 18, flameScale = 1): void {
     const flame = new FlameEmitter({
       position: { x, y: y - offsetY },
       intensity,
       ttlSeconds,
+      scale: flameScale,
     });
     flame.mount(this.scene.layers.interactions);
     flame.start();
@@ -975,20 +997,51 @@ export class SpurenRoom implements Room {
   private leaveForeignCandle(x: number, y: number): void {
     const candle = this.createCandleNode();
     (this.artifactsRoot ?? this.scene.layers.artifacts).addChild(candle);
-    this.placeGroundCandle(candle, x, y, 0.82);
+    if (!this.placeGroundCandle(candle, x, y, 0.82)) return;
     candle.scale.set(candle.scale.x * 0.88, candle.scale.y * 0.88);
-    this.attachCandleFlame(candle.x, candle.y, 0.42, 220, this.candleFlameOffsetForPoint(candle.x, candle.y) * 0.88);
+    this.attachCandleFlame(
+      candle.x,
+      candle.y,
+      0.42,
+      220,
+      this.candleFlameOffsetForPoint(candle.x, candle.y) * 0.88,
+      this.candleScaleForPoint(candle.x, candle.y) * 0.88,
+    );
     try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, 0.5); } catch { /* still */ }
     this.addTrace("candle", candle.x / this.scene.width, candle.y / this.scene.height, 220);
-    this.pushForeignArtifact(candle);
   }
 
-  private pushForeignArtifact(node: Container): void {
-    this.foreignArtifacts.push(node);
-    while (this.foreignArtifacts.length > 5) {
-      const old = this.foreignArtifacts.shift();
-      try { old?.destroy({ children: true }); } catch { /* ignore */ }
+  private rememberPlacedArtifact(node: Container): void {
+    this.placedArtifacts = this.placedArtifacts.filter((artifact) => !(artifact as unknown as { destroyed?: boolean }).destroyed);
+    if (!this.placedArtifacts.includes(node)) this.placedArtifacts.push(node);
+  }
+
+  private resolveArtifactPlacementPoint(preferred: NormPoint, searchRadius: number): NormPoint | null {
+    if (this.isValidArtifactPoint(preferred)) return preferred;
+
+    for (let i = 0; i < 24; i++) {
+      const point = randomNearbyPointInPoly(this.wayDropZone, preferred, searchRadius, this.waterPoly);
+      if (this.isValidArtifactPoint(point)) return point;
     }
+
+    for (let i = 0; i < 48; i++) {
+      const point = randomPointInPoly(this.wayDropZone);
+      if (this.isValidArtifactPoint(point)) return point;
+    }
+
+    return null;
+  }
+
+  private isValidArtifactPoint(point: NormPoint): boolean {
+    if (pointInNormPolygon(point.x, point.y, this.waterPoly)) return false;
+    for (const artifact of this.placedArtifacts) {
+      if ((artifact as unknown as { destroyed?: boolean }).destroyed) continue;
+      const ax = artifact.x / this.scene.width;
+      const ay = artifact.y / this.scene.height;
+      const distance = Math.hypot(ax - point.x, (ay - point.y) * 0.75);
+      if (distance < MIN_ARTIFACT_DISTANCE_NORM) return false;
+    }
+    return true;
   }
 
   private checkBackHold(): void {
