@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "silhouettes": [
+    {
+      "id": "passing",
+      "label": "Vorübergehend",
+      "src": "spuren/artifacts/silhouette_passing.png",
+      "baseHeight": 460,
+      "fadeInMs": 400,
+      "holdMs": 300,
+      "fadeOutMs": 950
+    },
+    {
+      "id": "kneeling",
+      "label": "Kniend",
+      "src": "spuren/artifacts/silhouette_kneeling.png",
+      "baseHeight": 380,
+      "fadeInMs": 600,
+      "holdMs": 1200,
+      "fadeOutMs": 1100
+    },
+    {
+      "id": "seated",
+      "label": "Sitzend",
+      "src": "spuren/artifacts/silhouette_seated.png",
+      "baseHeight": 340,
+      "fadeInMs": 600,
+      "holdMs": 1600,
+      "fadeOutMs": 1100
+    }
+  ]
+}

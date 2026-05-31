@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "transitions": {
+    "defaultDurationMs": 5500,
+    "minDurationMs": 4000,
+    "maxDurationMs": 10000,
+    "portalDurationMs": 6500
+  },
+  "silhouetteDefaults": {
+    "fadeInMs": 400,
+    "holdMs": 300,
+    "fadeOutMs": 950,
+    "hushSound": "audio/hush.mp3"
+  }
+}

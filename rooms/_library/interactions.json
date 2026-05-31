@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "interactions": [
+    {
+      "id": "water_rings",
+      "label": "Wasserringe erzeugen",
+      "description": "Tippen auf die Wasserfläche erzeugt ringförmige Wellen mit Splash-Sound.",
+      "implementation": "spawnWaterRipple",
+      "zoneKind": "tap",
+      "requiredArtifacts": [],
+      "requiredSounds": ["ring", "splash"],
+      "source": "builtin"
+    },
+    {
+      "id": "place_stone",
+      "label": "Stein ablegen",
+      "description": "Stein aus der Quelle aufnehmen, tragen und in einer Ablagezone niederlegen.",
+      "implementation": "placeStone",
+      "zoneKind": "drag_release",
+      "requiredArtifacts": ["stone"],
+      "requiredSounds": ["drop"],
+      "source": "builtin"
+    },
+    {
+      "id": "light_candle",
+      "label": "Kerze anzünden",
+      "description": "Kerze aus der Quelle nehmen, tragen und auf dem Weg niederstellen; entzündet sich mit Flamme.",
+      "implementation": "lightCandle",
+      "zoneKind": "drag_release",
+      "requiredArtifacts": ["candle_unlit", "candle_lit"],
+      "requiredSounds": ["breath"],
+      "source": "builtin"
+    },
+    {
+      "id": "write_paper",
+      "label": "Papier beschreiben und anheften",
+      "description": "Ein Blatt beschreiben und an eine Wand heften (noch zu implementieren).",
+      "implementation": "",
+      "zoneKind": "drag_release",
+      "requiredArtifacts": ["paper"],
+      "requiredSounds": ["pin"],
+      "source": "scaffold"
+    },
+    {
+      "id": "scatter_petals",
+      "label": "Blütenblätter streuen",
+      "description": "Blütenblätter aufnehmen und über eine Fläche streuen (noch zu implementieren).",
+      "implementation": "",
+      "zoneKind": "drag_release",
+      "requiredArtifacts": ["petal"],
+      "requiredSounds": ["scatter"],
+      "source": "scaffold"
+    },
+    {
+      "id": "take_light",
+      "label": "Licht aufnehmen",
+      "description": "Ein Lichtpunkt wird aufgenommen und mitgetragen (noch zu implementieren).",
+      "implementation": "",
+      "zoneKind": "press_release",
+      "requiredArtifacts": ["light"],
+      "requiredSounds": ["shimmer"],
+      "source": "scaffold"
+    },
+    {
+      "id": "conscious_breath",
+      "label": "Bewusst atmen",
+      "description": "Geführter Atemkreis mit sanfter Lichtpulsation (noch zu implementieren).",
+      "implementation": "",
+      "zoneKind": "press_release",
+      "requiredArtifacts": [],
+      "requiredSounds": ["breath_in", "breath_out"],
+      "source": "scaffold"
+    },
+    {
+      "id": "holy_words",
+      "label": "Zufällige heilige Worte",
+      "description": "Spielt ein zufälliges gesprochenes heiliges Wort ab (noch zu implementieren).",
+      "implementation": "",
+      "zoneKind": "tap",
+      "requiredArtifacts": [],
+      "requiredSounds": ["words"],
+      "source": "scaffold"
+    }
+  ]
+}

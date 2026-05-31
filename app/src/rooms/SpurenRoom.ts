@@ -21,6 +21,8 @@ import { LeafEmitter } from "../effects/LeafEmitter";
 import { WaterRing } from "../effects/WaterRing";
 import type { BaseEffect } from "../effects/BaseEffect";
 import type { Room } from "./Room";
+import type { RoomConfig } from "../config/types";
+import { resolveAsset } from "../config/loadRoomConfig";
 
 const RIPE_AMBIENT_S = 45;
 const RIPE_EXIT_S = 90;
@@ -613,7 +615,77 @@ export class SpurenRoom implements Room {
   private backHoldFired = false;
   private keyHandler = (ev: KeyboardEvent) => this.onKey(ev);
 
-  constructor(private scene: Scene, private cb: SpurenRoomCallbacks = {}) {}
+  // --- Datengetriebene, dashboard-konfigurierbare Werte (Fallback = Prototyp-Defaults) ---
+  private backgroundSrc = SPUREN_ASSETS.background;
+  private ambientSrc = SPUREN_ASSETS.audio.ambient;
+  private ambientFadeMs = 2500;
+  private effectIntensity: Record<string, number> = { fog: 0.35, dust: 0.45, leaf: 0.42 };
+  private effectEnabled: Record<string, boolean> = { fog: true, dust: true, leaf: true };
+  private introLines: string[] = ARRIVAL_TEXT;
+  private introDurationMs = ARRIVAL_INTRO_MS;
+  private exitDwellSeconds = RIPE_EXIT_S;
+  private exitHintText = EXIT_OPEN_TEXT;
+  private presenceEnabled = true;
+  private maxPresenceSpawns = MAX_PRESENCE_SPAWNS;
+  private maxForeignTraceArtifacts = MAX_FOREIGN_TRACE_ARTIFACTS;
+  private firstPresenceMinMs = FIRST_PRESENCE_MIN_DELAY_MS;
+  private firstPresenceMaxMs = FIRST_PRESENCE_MAX_DELAY_MS;
+
+  constructor(private scene: Scene, private cb: SpurenRoomCallbacks = {}, config?: RoomConfig) {
+    if (config) this.applyConfig(config);
+  }
+
+  /** Übernimmt die dashboard-editierbaren Werte aus der Raumkonfiguration. */
+  private applyConfig(config: RoomConfig): void {
+    const z = config.zones ?? {};
+    const poly0 = (name: string): NormPoint[] | undefined =>
+      z[name]?.polygons?.[0]?.map((p) => ({ x: p.x, y: p.y }));
+    const polys = (name: string): NormPoint[][] | undefined =>
+      z[name]?.polygons?.map((poly) => poly.map((p) => ({ x: p.x, y: p.y })));
+    this.waterPoly = poly0("water") ?? this.waterPoly;
+    this.wayDropZone = poly0("way") ?? this.wayDropZone;
+    this.stoneDropZones = polys("stoneDrops") ?? this.stoneDropZones;
+    this.forwardActionZone = poly0("forwardGate") ?? this.forwardActionZone;
+    this.backActionZone = poly0("backAction") ?? this.backActionZone;
+    this.candleSourcePolys = polys("candleSources") ?? this.candleSourcePolys;
+    this.stoneSourcePoly = poly0("stoneSource") ?? this.stoneSourcePoly;
+
+    if (config.perspective) {
+      const p = config.perspective;
+      GROUND_PERSPECTIVE.vanishingPoint.x = p.vanishingPoint.x;
+      GROUND_PERSPECTIVE.vanishingPoint.y = p.vanishingPoint.y;
+      GROUND_PERSPECTIVE.referencePoint.x = p.referencePoint.x;
+      GROUND_PERSPECTIVE.referencePoint.y = p.referencePoint.y;
+      GROUND_PERSPECTIVE.minScale = p.minScale;
+      GROUND_PERSPECTIVE.nearScale = p.nearScale;
+    }
+
+    if (config.background) this.backgroundSrc = resolveAsset(config.id, config.background);
+    const ambient = config.ambient?.[0];
+    if (ambient) {
+      this.ambientSrc = resolveAsset(config.id, ambient.src);
+      this.ambientFadeMs = ambient.fadeMs;
+    }
+    for (const fx of config.effects ?? []) {
+      this.effectEnabled[fx.effect] = fx.enabled;
+      this.effectIntensity[fx.effect] = fx.intensity;
+    }
+    if (config.intro) {
+      if (config.intro.lines?.length) this.introLines = config.intro.lines;
+      if (config.intro.durationMs) this.introDurationMs = config.intro.durationMs;
+    }
+    if (config.dwellGate) {
+      if (typeof config.dwellGate.minDwellSeconds === "number") this.exitDwellSeconds = config.dwellGate.minDwellSeconds;
+      if (config.dwellGate.exitHint) this.exitHintText = config.dwellGate.exitHint;
+    }
+    if (config.presence) {
+      this.presenceEnabled = config.presence.enabled !== false;
+      if (typeof config.presence.maxSpawns === "number") this.maxPresenceSpawns = config.presence.maxSpawns;
+      if (typeof config.presence.maxForeignTraceArtifacts === "number") this.maxForeignTraceArtifacts = config.presence.maxForeignTraceArtifacts;
+      if (typeof config.presence.firstDelayMsMin === "number") this.firstPresenceMinMs = config.presence.firstDelayMsMin;
+      if (typeof config.presence.firstDelayMsMax === "number") this.firstPresenceMaxMs = config.presence.firstDelayMsMax;
+    }
+  }
 
   async mount(): Promise<void> {
     if (this.destroyed || !this.scene.isReady) return;
@@ -621,7 +693,7 @@ export class SpurenRoom implements Room {
       && useStore.getState().roomIntrosSeen.has("spuren");
     useStore.getState().enterRoom("spuren");
 
-    try { audioEngine.crossfadeAmbient(SPUREN_ASSETS.audio.ambient, 2500); } catch { /* still */ }
+    try { audioEngine.crossfadeAmbient(this.ambientSrc, this.ambientFadeMs); } catch { /* still */ }
 
     const reduced = useStore.getState().reducedMotion;
 
@@ -629,7 +701,7 @@ export class SpurenRoom implements Room {
     this.artifactsRoot = this.adopt(this.scene.layers.artifacts);
     this.interactionsRoot = this.adopt(this.scene.layers.interactions);
 
-    const bgTex = await Assets.load<Texture>(SPUREN_ASSETS.background);
+    const bgTex = await Assets.load<Texture>(this.backgroundSrc);
     this.stoneTextures = await Promise.all([
       Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_a),
       Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_b),
@@ -692,23 +764,29 @@ export class SpurenRoom implements Room {
     }
 
     if (!reduced) {
-      this.fog = new FogLayer({ intensity: 0.35 });
-      this.fog.mount(this.scene.layers.particles_bg);
-      this.fog.start();
-      this.effects.push(this.fog);
+      if (this.effectEnabled.fog !== false) {
+        this.fog = new FogLayer({ intensity: this.effectIntensity.fog ?? 0.35 });
+        this.fog.mount(this.scene.layers.particles_bg);
+        this.fog.start();
+        this.effects.push(this.fog);
+      }
 
-      const dust = new DustEmitter({ intensity: 0.45 });
-      dust.mount(this.scene.layers.particles_fg);
-      dust.start();
-      this.effects.push(dust);
+      if (this.effectEnabled.dust !== false) {
+        const dust = new DustEmitter({ intensity: this.effectIntensity.dust ?? 0.45 });
+        dust.mount(this.scene.layers.particles_fg);
+        dust.start();
+        this.effects.push(dust);
+      }
 
-      this.arrivalTimers.push(window.setTimeout(() => {
-        if (this.destroyed) return;
-        const leaves = new LeafEmitter({ intensity: 0.42 });
-        leaves.mount(this.scene.layers.parallax_mid);
-        leaves.start();
-        this.effects.push(leaves);
-      }, FEATHER_START_DELAY_MS));
+      if (this.effectEnabled.leaf !== false) {
+        this.arrivalTimers.push(window.setTimeout(() => {
+          if (this.destroyed) return;
+          const leaves = new LeafEmitter({ intensity: this.effectIntensity.leaf ?? 0.42 });
+          leaves.mount(this.scene.layers.parallax_mid);
+          leaves.start();
+          this.effects.push(leaves);
+        }, FEATHER_START_DELAY_MS));
+      }
     }
 
     this.restorePlacedArtifacts();
@@ -1162,7 +1240,7 @@ export class SpurenRoom implements Room {
       this.fog?.setIntensity(0.58);
     }
 
-    if (!this.exitOpen && dwell >= RIPE_EXIT_S) {
+    if (!this.exitOpen && dwell >= this.exitDwellSeconds) {
       this.exitOpen = true;
       this.showExitOpenHint();
     }
@@ -1180,7 +1258,7 @@ export class SpurenRoom implements Room {
 
     this.arrivalTimers.push(window.setTimeout(() => {
       if (this.destroyed) return;
-      this.showArrivalOverlay(ARRIVAL_TEXT);
+      this.showArrivalOverlay(this.introLines);
       try { audioEngine.playOneShot(SPUREN_ASSETS.audio.spoken_intro, 0.82); } catch { /* still */ }
 
       void spokenIntroDuration.then((durationMs) => {
@@ -1192,18 +1270,18 @@ export class SpurenRoom implements Room {
           this.enableRoomActivity();
         }, durationMs));
       });
-    }, ARRIVAL_INTRO_MS));
+    }, this.introDurationMs));
   }
 
   private enableRoomActivity(): void {
     if (this.destroyed) return;
     if (this.roomActivityEnabled) return;
     this.roomActivityEnabled = true;
-    if (this.suppressPresenceSpawns) {
+    if (this.suppressPresenceSpawns || !this.presenceEnabled) {
       this.enableStageInteractions();
       return;
     }
-    const firstPresenceDelay = randomRange(FIRST_PRESENCE_MIN_DELAY_MS, FIRST_PRESENCE_MAX_DELAY_MS);
+    const firstPresenceDelay = randomRange(this.firstPresenceMinMs, this.firstPresenceMaxMs);
     this.arrivalTimers.push(window.setTimeout(() => {
       if (!this.destroyed) this.spawnRandomPresence();
     }, firstPresenceDelay));
@@ -1239,7 +1317,7 @@ export class SpurenRoom implements Room {
     if (this.exitHintShown || this.destroyed) return;
     this.exitHintShown = true;
     try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.42); } catch { /* still */ }
-    this.showArrivalOverlay([EXIT_OPEN_TEXT]);
+    this.showArrivalOverlay([this.exitHintText]);
     this.arrivalTimers.push(window.setTimeout(() => this.hideArrivalOverlay(), 5200));
   }
 
@@ -1639,7 +1717,7 @@ export class SpurenRoom implements Room {
   }
 
   private scheduleNextPresence(): void {
-    if (this.destroyed || this.suppressPresenceSpawns || this.presenceSpawnCount >= MAX_PRESENCE_SPAWNS) return;
+    if (this.destroyed || this.suppressPresenceSpawns || this.presenceSpawnCount >= this.maxPresenceSpawns) return;
     const dwell = useStore.getState().dwellSeconds;
     const delayMs = randomRange(22000, 36000)
       + this.presenceSpawnCount * 14000
@@ -1652,7 +1730,7 @@ export class SpurenRoom implements Room {
   }
 
   private spawnRandomPresence(): void {
-    if (this.suppressPresenceSpawns || this.presenceSpawnCount >= MAX_PRESENCE_SPAWNS) return;
+    if (this.suppressPresenceSpawns || this.presenceSpawnCount >= this.maxPresenceSpawns) return;
     this.presenceSpawnCount += 1;
     const r = Math.random();
     if (r < 0.38) this.spawnForeignPresence("walking");
@@ -1817,7 +1895,7 @@ export class SpurenRoom implements Room {
   }
 
   private shouldLeaveForeignTraceArtifact(): boolean {
-    if (this.foreignTraceArtifactCount >= MAX_FOREIGN_TRACE_ARTIFACTS) return false;
+    if (this.foreignTraceArtifactCount >= this.maxForeignTraceArtifacts) return false;
     const dwell = useStore.getState().dwellSeconds;
     const chance = clamp(0.72 - this.foreignTraceArtifactCount * 0.12 - dwell / 900, 0.16, 0.72);
     return Math.random() < chance;

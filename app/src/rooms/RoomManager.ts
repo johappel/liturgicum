@@ -7,6 +7,9 @@ import { SpurenRoom } from "./SpurenRoom";
 import { HoerenRoom } from "./HoerenRoom";
 import type { Room } from "./Room";
 import type { RoomId } from "../state/store";
+import type { RoomConfig } from "../config/types";
+import { loadRoomConfig } from "../config/loadRoomConfig";
+import spurenConfigDefault from "../../../rooms/spuren/room.config.json";
 
 /**
  * RoomManager orchestriert Vorhof ⇄ Spuren → Hören und führt jede
@@ -18,6 +21,7 @@ export class RoomManager {
   private firstTouchHandler: ((e: PointerEvent) => void) | null = null;
   private transitioning = false;
   private destroyed = false;
+  private spurenConfig: RoomConfig | null = null;
 
   constructor(private scene: Scene) {}
 
@@ -76,7 +80,7 @@ export class RoomManager {
         return new SpurenRoom(this.scene, {
           onRequestForward: () => { void this.goHoeren(); },
           onRequestBack: () => { void this.goVorhof(); },
-        });
+        }, this.spurenConfig ?? undefined);
       case "hoeren":
         return new HoerenRoom(this.scene);
     }
@@ -90,6 +94,12 @@ export class RoomManager {
     this.transitioning = true;
     const reduced = useStore.getState().reducedMotion;
     const exec = async () => {
+      if (id === "spuren" && !this.spurenConfig) {
+        this.spurenConfig = await loadRoomConfig(
+          "spuren",
+          spurenConfigDefault as unknown as RoomConfig,
+        );
+      }
       this.current?.destroy();
       this.current = this.build(id);
       this.currentId = id;

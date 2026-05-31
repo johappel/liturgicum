@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "effects": [
+    {
+      "id": "fog",
+      "label": "Nebel",
+      "description": "Atmosphärische Nebelschicht: zwei langsam driftende, additive Nebelflächen über der Bühne.",
+      "implementation": "FogLayer",
+      "source": "builtin",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Dichte", "default": 0.35, "min": 0, "max": 1, "step": 0.05 }
+      ]
+    },
+    {
+      "id": "dust",
+      "label": "Goldstaub",
+      "description": "Feine, driftende Staubpartikel entlang der Lichtachse.",
+      "implementation": "DustEmitter",
+      "source": "builtin",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Menge", "default": 0.45, "min": 0, "max": 1, "step": 0.05 }
+      ]
+    },
+    {
+      "id": "leaf",
+      "label": "Fallende Federn / Blätter",
+      "description": "Prozedural fallende Federn oder Blätter, sanft trudelnd.",
+      "implementation": "LeafEmitter",
+      "source": "builtin",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Menge", "default": 0.5, "min": 0, "max": 1, "step": 0.05 },
+        { "name": "startDelayMs", "type": "number", "label": "Startverzögerung (ms)", "default": 10000, "min": 0, "max": 60000, "step": 500 }
+      ]
+    },
+    {
+      "id": "flame",
+      "label": "Kerzenflamme",
+      "description": "Kerzenflamme mit Glut und Atem-Oszillation.",
+      "implementation": "FlameEmitter",
+      "source": "builtin",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Stärke", "default": 0.6, "min": 0, "max": 1, "step": 0.05 },
+        { "name": "scale", "type": "number", "label": "Größe", "default": 1, "min": 0.2, "max": 3, "step": 0.1 }
+      ]
+    },
+    {
+      "id": "smoke",
+      "label": "Rauch",
+      "description": "Weiche, langsam aufsteigende Rauchpuffer.",
+      "implementation": "SmokeEmitter",
+      "source": "builtin",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Stärke", "default": 0.5, "min": 0, "max": 1, "step": 0.05 }
+      ]
+    },
+    {
+      "id": "water_ring",
+      "label": "Wasserwellen",
+      "description": "Konzentrische, perspektivisch korrekte Wasserwellen.",
+      "implementation": "WaterRing",
+      "source": "builtin",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Stärke", "default": 0.5, "min": 0, "max": 1, "step": 0.05 }
+      ]
+    },
+    {
+      "id": "rising_lights",
+      "label": "Aufsteigende Lichter",
+      "description": "Sanft aufsteigende Lichtpunkte (noch zu implementieren).",
+      "implementation": "",
+      "source": "scaffold",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Menge", "default": 0.4, "min": 0, "max": 1, "step": 0.05 }
+      ]
+    },
+    {
+      "id": "rain",
+      "label": "Regen",
+      "description": "Feiner, fallender Regen (noch zu implementieren).",
+      "implementation": "",
+      "source": "scaffold",
+      "params": [
+        { "name": "intensity", "type": "number", "label": "Stärke", "default": 0.5, "min": 0, "max": 1, "step": 0.05 }
+      ]
+    }
+  ]
+}
