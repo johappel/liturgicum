@@ -38,6 +38,10 @@ export interface InteractionDefMeta {
   implementation: string;
   /** Gestenart: tap | press_release | drag_release. */
   zoneKind: "tap" | "press_release" | "drag_release";
+  /** Kanonischer Name der Ziel-/Tap-Zone (wird beim Hinzufügen vorbelegt). */
+  defaultZone?: string;
+  /** Kanonischer Name der Quell-/Drag-Zone (nur bei drag_release sinnvoll). */
+  defaultSourceZone?: string;
   /** Benötigte Asset-Schlüssel (z. B. Artefakt-Sprites). */
   requiredArtifacts: string[];
   /** Benötigte Sound-Schlüssel. */

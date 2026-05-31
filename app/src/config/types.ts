@@ -73,8 +73,10 @@ export interface InteractionInstanceConfig {
   id: string;
   /** Verweis auf InteractionDef.id in der Interactions-Library. */
   interaction: string;
-  /** Name der Zone (Schlüssel in RoomConfig.zones), in der die Interaktion gilt. */
+  /** Ziel-/Tap-Zone (Schlüssel in RoomConfig.zones): wo abgelegt/getippt wird. */
   zone?: string;
+  /** Quell-/Drag-Zone (Schlüssel in RoomConfig.zones): wo ein Objekt aufgenommen wird. */
+  sourceZone?: string;
   /** Asset-Schlüssel für Quell-/Ziel-Artefakte (effekt-spezifisch). */
   artifacts?: string[];
   /** Sound-Schlüssel/-URLs für diese Interaktion. */

@@ -413,10 +413,22 @@ function InteractionsSection({
   const defs = lib?.interactions ?? [];
   const zoneNames = Object.keys(config.zones);
 
-  function nextZoneName(): string {
+  function nextZoneName(base = "zone"): string {
     let index = 1;
-    while (config.zones[`zone_${index}`]) index += 1;
-    return `zone_${index}`;
+    while (config.zones[`${base}_${index}`]) index += 1;
+    return `${base}_${index}`;
+  }
+
+  /** Stellt sicher, dass alle übergebenen Zonennamen (leer) existieren. */
+  function ensureZones(
+    zones: Record<string, RoomConfig["zones"][string]>,
+    names: (string | undefined)[],
+  ): Record<string, RoomConfig["zones"][string]> {
+    const next = { ...zones };
+    for (const name of names) {
+      if (name && !next[name]) next[name] = { polygons: [[]] };
+    }
+    return next;
   }
 
   function patch(i: number, p: Partial<InteractionInstanceConfig>): void {
@@ -426,41 +438,52 @@ function InteractionsSection({
     });
   }
   function add(): void {
-    const first = defs[0]?.id ?? "";
-    const zone = zoneNames[0] ?? nextZoneName();
+    const def = defs[0];
+    const zone = def?.defaultZone ?? zoneNames[0] ?? nextZoneName();
+    const sourceZone =
+      def?.zoneKind === "drag_release" ? def?.defaultSourceZone : undefined;
     update({
       ...config,
-      zones: zoneNames[0]
-        ? config.zones
-        : {
-            ...config.zones,
-            [zone]: { polygons: [[]] },
-          },
+      zones: ensureZones(config.zones, [zone, sourceZone]),
       interactions: [
         ...config.interactions,
         {
           id: `interaction_${config.interactions.length + 1}`,
-          interaction: first,
+          interaction: def?.id ?? "",
           zone,
+          ...(sourceZone ? { sourceZone } : {}),
           enabled: true,
         },
       ],
     });
   }
-  function addZoneForInteraction(i: number): void {
-    const name = prompt("Name der neuen Zone (a-z, 0-9, _):", nextZoneName())?.trim();
-    if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
-    if (config.zones[name]) {
-      patch(i, { zone: name });
-      return;
-    }
+  /** Wechselt die Interaktion und übernimmt deren kanonische Default-Zonen. */
+  function changeInteraction(i: number, id: string): void {
+    const def = defs.find((d) => d.id === id);
+    const current = config.interactions[i];
+    const zone = current.zone || def?.defaultZone;
+    const sourceZone =
+      def?.zoneKind === "drag_release"
+        ? current.sourceZone || def?.defaultSourceZone
+        : undefined;
     update({
       ...config,
-      zones: {
-        ...config.zones,
-        [name]: { polygons: [[]] },
-      },
-      interactions: config.interactions.map((x, idx) => (idx === i ? { ...x, zone: name } : x)),
+      zones: ensureZones(config.zones, [zone, sourceZone]),
+      interactions: config.interactions.map((x, idx) =>
+        idx === i ? { ...x, interaction: id, zone, sourceZone } : x,
+      ),
+    });
+  }
+  function addZoneFor(i: number, field: "zone" | "sourceZone"): void {
+    const base = field === "sourceZone" ? "source" : "zone";
+    const name = prompt("Name der neuen Zone (a-z, 0-9, _):", nextZoneName(base))?.trim();
+    if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
+    update({
+      ...config,
+      zones: ensureZones(config.zones, [name]),
+      interactions: config.interactions.map((x, idx) =>
+        idx === i ? { ...x, [field]: name } : x,
+      ),
     });
   }
   function remove(i: number): void {
@@ -494,7 +517,7 @@ function InteractionsSection({
                 <label>Interaktion</label>
                 <select
                   value={x.interaction}
-                  onChange={(ev) => patch(i, { interaction: ev.target.value })}
+                  onChange={(ev) => changeInteraction(i, ev.target.value)}
                 >
                   {[...new Set([...defs.map((d) => d.id), x.interaction].filter(Boolean))].map(
                     (id) => (
@@ -506,7 +529,7 @@ function InteractionsSection({
                 </select>
               </div>
               <div className="field">
-                <label>Zone</label>
+                <label>{def?.zoneKind === "drag_release" ? "Ablage-Zone (Drop)" : "Zone"}</label>
                 <div className="row">
                   <select value={x.zone ?? ""} onChange={(ev) => patch(i, { zone: ev.target.value })}>
                     <option value="">— keine —</option>
@@ -516,12 +539,31 @@ function InteractionsSection({
                       </option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => addZoneForInteraction(i)}>+ Zone</button>
+                  <button type="button" onClick={() => addZoneFor(i, "zone")}>+ Zone</button>
                 </div>
                 {zoneNames.length === 0 && (
                   <p className="muted">Noch keine Zonen vorhanden. Mit "+ Zone" legst du direkt eine an und weist sie dieser Interaktion zu.</p>
                 )}
               </div>
+              {def?.zoneKind === "drag_release" && (
+                <div className="field">
+                  <label>Quell-Zone (Drag) — wo das Objekt aufgenommen wird</label>
+                  <div className="row">
+                    <select
+                      value={x.sourceZone ?? ""}
+                      onChange={(ev) => patch(i, { sourceZone: ev.target.value })}
+                    >
+                      <option value="">— keine —</option>
+                      {zoneNames.map((z) => (
+                        <option key={z} value={z}>
+                          {z}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => addZoneFor(i, "sourceZone")}>+ Zone</button>
+                  </div>
+                </div>
+              )}
             </div>
             {def && <p className="muted">{def.description}</p>}
           </div>

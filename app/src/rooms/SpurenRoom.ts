@@ -571,6 +571,8 @@ export class SpurenRoom implements Room {
   private presenceTextures: Partial<Record<PresenceKind, Texture>> = {};
   private waterPoly: NormPoint[] = WATER_POLY.map((p) => ({ ...p }));
   private wayDropZone: NormPoint[] = WAY_DROP_ZONE.map((p) => ({ ...p }));
+  /** Bodenzone, auf der Silhouetten erscheinen (Fallback: Weg-Zone). */
+  private presenceFloorZone: NormPoint[] = WAY_DROP_ZONE.map((p) => ({ ...p }));
   private stoneDropZones: NormPoint[][] = STONE_DROP_ZONES.map((poly) => poly.map((p) => ({ ...p })));
   private forwardActionZone: NormPoint[] = GATE_POLY.map((p) => ({ ...p }));
   private backActionZone: NormPoint[] = BACK_ACTION_POLY.map((p) => ({ ...p }));
@@ -649,6 +651,9 @@ export class SpurenRoom implements Room {
       z[name]?.polygons?.map((poly) => poly.map((p) => ({ x: p.x, y: p.y })));
     this.waterPoly = poly0("water") ?? this.waterPoly;
     this.wayDropZone = poly0("way") ?? this.wayDropZone;
+    // Eigene Bodenzone für Silhouetten, sonst die Weg-Zone (nur gültige Polygone).
+    const floor = poly0("presenceFloor");
+    this.presenceFloorZone = floor && floor.length >= 3 ? floor : this.wayDropZone;
     this.stoneDropZones = polys("stoneDrops") ?? this.stoneDropZones;
     this.forwardActionZone = poly0("forwardGate") ?? this.forwardActionZone;
     this.backActionZone = poly0("backAction") ?? this.backActionZone;
@@ -1783,7 +1788,7 @@ export class SpurenRoom implements Room {
   private spawnForeignPresence(kind: PresenceKind): void {
     const W = this.scene.width;
     const H = this.scene.height;
-    const zone = this.wayDropZone;
+    const zone = this.presenceFloorZone;
     const base = randomPointInPoly(zone);
     const start = { x: base.x * W, y: base.y * H };
     const walkTarget = kind === "walking"

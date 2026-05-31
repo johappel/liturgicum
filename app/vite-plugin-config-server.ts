@@ -88,7 +88,14 @@ function defaultRoomConfig(id: string, title: string, background: string): unkno
     ambient: [],
     effects: [],
     interactions: [],
-    zones: {},
+    // Kanonische Standard-Zonen (leer), die in fast jedem Raum gebraucht werden.
+    // Spiegelt app/src/config/standardZones.ts wider.
+    zones: {
+      backAction: { polygons: [[]] },
+      forwardGate: { polygons: [[]] },
+      presenceFloor: { polygons: [[]] },
+      water: { polygons: [[]] },
+    },
     perspective: {
       vanishingPoint: { x: 0.5, y: 0.4 },
       referencePoint: { x: 0.5, y: 0.92 },

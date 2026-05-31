@@ -7,6 +7,7 @@
       "description": "Tippen auf die Wasserfläche erzeugt ringförmige Wellen mit Splash-Sound.",
       "implementation": "spawnWaterRipple",
       "zoneKind": "tap",
+      "defaultZone": "water",
       "requiredArtifacts": [],
       "requiredSounds": ["ring", "splash"],
       "source": "builtin"
@@ -17,6 +18,8 @@
       "description": "Stein aus der Quelle aufnehmen, tragen und in einer Ablagezone niederlegen.",
       "implementation": "placeStone",
       "zoneKind": "drag_release",
+      "defaultZone": "stoneDrops",
+      "defaultSourceZone": "stoneSource",
       "requiredArtifacts": ["stone"],
       "requiredSounds": ["drop"],
       "source": "builtin"
@@ -27,6 +30,8 @@
       "description": "Kerze aus der Quelle nehmen, tragen und auf dem Weg niederstellen; entzündet sich mit Flamme.",
       "implementation": "lightCandle",
       "zoneKind": "drag_release",
+      "defaultZone": "way",
+      "defaultSourceZone": "candleSources",
       "requiredArtifacts": ["candle_unlit", "candle_lit"],
       "requiredSounds": ["breath"],
       "source": "builtin"
@@ -37,6 +42,8 @@
       "description": "Ein Blatt beschreiben und an eine Wand heften (noch zu implementieren).",
       "implementation": "",
       "zoneKind": "drag_release",
+      "defaultZone": "pinwand",
+      "defaultSourceZone": "zettelkasten",
       "requiredArtifacts": ["paper"],
       "requiredSounds": ["pin"],
       "source": "scaffold"
@@ -47,6 +54,8 @@
       "description": "Blütenblätter aufnehmen und über eine Fläche streuen (noch zu implementieren).",
       "implementation": "",
       "zoneKind": "drag_release",
+      "defaultZone": "petalField",
+      "defaultSourceZone": "petalSource",
       "requiredArtifacts": ["petal"],
       "requiredSounds": ["scatter"],
       "source": "scaffold"
@@ -57,6 +66,7 @@
       "description": "Ein Lichtpunkt wird aufgenommen und mitgetragen (noch zu implementieren).",
       "implementation": "",
       "zoneKind": "press_release",
+      "defaultZone": "lightField",
       "requiredArtifacts": ["light"],
       "requiredSounds": ["shimmer"],
       "source": "scaffold"
