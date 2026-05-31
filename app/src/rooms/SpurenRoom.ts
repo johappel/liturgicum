@@ -23,6 +23,18 @@ import type { BaseEffect } from "../effects/BaseEffect";
 import type { Room } from "./Room";
 import type { RoomConfig, RandomEventConfig } from "../config/types";
 import { resolveAsset } from "../config/loadRoomConfig";
+import { clamp, randomHorizontalMirror, randomRange, smoothstep } from "../common/mathUtils";
+import { ArrivalOverlay } from "../ui/ArrivalOverlay";
+import { loadAudioDurationMs } from "../audio/audioDuration";
+import { PolygonZoneEditor } from "../debug/PolygonZoneEditor";
+import {
+  createRectPolyAround,
+  pointInAnyNormPolygon,
+  pointInNormPolygon,
+  randomNearbyPointInPoly,
+  randomPointInAnyPoly,
+  randomPointInPoly,
+} from "../geometry/polygonHelpers";
 
 const RIPE_AMBIENT_S = 45;
 const RIPE_EXIT_S = 90;
@@ -30,7 +42,6 @@ const BACK_HOLD_MS = 1500;
 const MIN_CANDLE_DISTANCE_NORM = 0.002;
 const ARRIVAL_INTRO_MS = 20000;
 const SPOKEN_INTRO_FALLBACK_MS = 120000;
-const AUDIO_METADATA_TIMEOUT_MS = 15000;
 const FEATHER_START_DELAY_MS = 10000;
 const FIRST_PRESENCE_MIN_DELAY_MS = 20000;
 const FIRST_PRESENCE_MAX_DELAY_MS = 30000;
@@ -528,9 +539,6 @@ interface HeldItem {
   node: Container;
 }
 
-type DebugZoneKind = "water" | "way" | "stone";
-type ActionZoneKind = "forward" | "back" | "candle" | "stoneSource";
-
 type PresenceKind = "walking" | "kneeling" | "seated";
 
 interface PresenceActor {
@@ -559,7 +567,9 @@ export class SpurenRoom implements Room {
   private resizeHandler: (() => void) | null = null;
   private presenceTimer: number | null = null;
   private arrivalTimers: number[] = [];
-  private arrivalOverlay: HTMLDivElement | null = null;
+  private readonly arrivalOverlay = new ArrivalOverlay(
+    () => this.scene.app.canvas.parentElement ?? document.body,
+  );
 
   private ownedContainers: Container[] = [];
   private artifactsRoot: Container | null = null;
@@ -578,8 +588,6 @@ export class SpurenRoom implements Room {
   private backActionZone: NormPoint[] = BACK_ACTION_POLY.map((p) => ({ ...p }));
   private candleSourcePolys: NormPoint[][] = CANDLE_SOURCE_POLYS.map((poly) => poly.map((p) => ({ ...p })));
   private stoneSourcePoly: NormPoint[] = STONE_SOURCE_POLY.map((p) => ({ ...p }));
-  private debugOverlay: Graphics | null = null;
-  private actionDebugOverlay: Graphics | null = null;
   private perspectiveDebugOverlay: Graphics | null = null;
   private debugMode =
     typeof window !== "undefined" &&
@@ -590,12 +598,8 @@ export class SpurenRoom implements Room {
   private perspectiveDebugMode =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("debugPerspective");
-  private activeZone: DebugZoneKind = "water";
-  private activeStoneZoneIndex = 0;
-  private draggingVertex: { zone: DebugZoneKind; zoneIndex?: number; index: number } | null = null;
-  private activeActionZone: ActionZoneKind = "forward";
-  private activeCandleSourceIndex = 0;
-  private draggingActionVertex: { zone: ActionZoneKind; zoneIndex?: number; index: number } | null = null;
+  private zoneEditor: PolygonZoneEditor | null = null;
+  private actionEditor: PolygonZoneEditor | null = null;
   private activePerspectiveHandle: "vanishing" | "reference" = "vanishing";
   private draggingPerspectiveHandle: "vanishing" | "reference" | null = null;
   private lastPointerNorm: NormPoint = { x: 0.5, y: 0.5 };
@@ -745,22 +749,51 @@ export class SpurenRoom implements Room {
       bg.y = H / 2;
       const scale = Math.max(W / bgTex.width, H / bgTex.height);
       bg.scale.set(scale);
-      this.drawDebugZones();
-      this.drawActionDebugZones();
+      this.zoneEditor?.redraw();
+      this.actionEditor?.redraw();
       this.drawPerspectiveDebug();
     };
     fitBackground();
 
     if (this.debugMode) {
-      this.debugOverlay = new Graphics();
-      this.scene.layers.overlay.addChild(this.debugOverlay);
-      this.drawDebugZones();
+      this.zoneEditor = new PolygonZoneEditor(
+        [
+          { key: "w", color: DEBUG_WATER_COLOR, polys: () => [this.waterPoly] },
+          { key: "d", color: DEBUG_WAY_COLOR, polys: () => [this.wayDropZone] },
+          {
+            key: "s",
+            color: DEBUG_STONE_COLOR,
+            array: true,
+            polys: () => this.stoneDropZones,
+            ensure: (i) => this.ensureStoneDropZone(i),
+          },
+        ],
+        this.scene,
+        () => this.lastPointerNorm,
+        () => this.exportDebugPolys(),
+      );
+      this.zoneEditor.attach(this.scene.layers.overlay);
       console.info("[debugZones] Controls: W=water, D=way, S/1-3=stone drop zone, A=add vertex at cursor, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
     }
     if (this.actionDebugMode) {
-      this.actionDebugOverlay = new Graphics();
-      this.scene.layers.overlay.addChild(this.actionDebugOverlay);
-      this.drawActionDebugZones();
+      this.actionEditor = new PolygonZoneEditor(
+        [
+          { key: "f", color: DEBUG_ACTION_FORWARD_COLOR, polys: () => [this.forwardActionZone] },
+          { key: "b", color: DEBUG_ACTION_BACK_COLOR, polys: () => [this.backActionZone] },
+          { key: "t", color: DEBUG_ACTION_STONE_COLOR, polys: () => [this.stoneSourcePoly] },
+          {
+            key: "c",
+            color: DEBUG_ACTION_CANDLE_COLOR,
+            array: true,
+            polys: () => this.candleSourcePolys,
+            ensure: (i) => this.ensureCandleSourcePoly(i),
+          },
+        ],
+        this.scene,
+        () => this.lastPointerNorm,
+        () => this.exportActionDebugPolys(),
+      );
+      this.actionEditor.attach(this.scene.layers.overlay);
       console.info("[debugActionZones] Controls: F=forward, B=back, C/1-3=candle source, T=stone source, A=add vertex, N=insert on nearest edge, M=subdivide polygon, Del=remove nearest vertex, P=print+copy");
     }
     if (this.perspectiveDebugMode) {
@@ -840,7 +873,7 @@ export class SpurenRoom implements Room {
     this.randomEventTimers = [];
     for (const timer of this.arrivalTimers) window.clearTimeout(timer);
     this.arrivalTimers = [];
-    this.hideArrivalOverlay(true);
+    this.arrivalOverlay.hide(true);
     if (this.resizeHandler) {
       window.removeEventListener("resize", this.resizeHandler);
       this.resizeHandler = null;
@@ -874,10 +907,10 @@ export class SpurenRoom implements Room {
     }
     this.effects = [];
 
-    try { this.debugOverlay?.destroy(); } catch { /* ignore */ }
-    this.debugOverlay = null;
-    try { this.actionDebugOverlay?.destroy(); } catch { /* ignore */ }
-    this.actionDebugOverlay = null;
+    try { this.zoneEditor?.destroy(); } catch { /* ignore */ }
+    this.zoneEditor = null;
+    try { this.actionEditor?.destroy(); } catch { /* ignore */ }
+    this.actionEditor = null;
     try { this.perspectiveDebugOverlay?.destroy(); } catch { /* ignore */ }
     this.perspectiveDebugOverlay = null;
 
@@ -901,20 +934,8 @@ export class SpurenRoom implements Room {
     const y = ev.global.y;
     this.lastPointerNorm = { x: x / this.scene.width, y: y / this.scene.height };
 
-    if (this.debugMode) {
-      const hit = this.findDebugVertex(x, y, 14);
-      if (hit) {
-        this.draggingVertex = hit;
-        return;
-      }
-    }
-    if (this.actionDebugMode) {
-      const hit = this.findActionDebugVertex(x, y, 14);
-      if (hit) {
-        this.draggingActionVertex = hit;
-        return;
-      }
-    }
+    if (this.zoneEditor?.handlePointerDown(x, y)) return;
+    if (this.actionEditor?.handlePointerDown(x, y)) return;
     if (this.perspectiveDebugMode) {
       const handle = findPerspectiveHandleAtPixel(
         GROUND_PERSPECTIVE,
@@ -964,22 +985,8 @@ export class SpurenRoom implements Room {
     const y = ev.global.y;
     this.lastPointerNorm = { x: x / this.scene.width, y: y / this.scene.height };
 
-    if (this.draggingVertex) {
-      const nx = clamp(x / this.scene.width, 0, 1);
-      const ny = clamp(y / this.scene.height, 0, 1);
-      const poly = this.debugPolyForDrag(this.draggingVertex);
-      poly[this.draggingVertex.index] = { x: nx, y: ny };
-      this.drawDebugZones();
-      return;
-    }
-    if (this.draggingActionVertex) {
-      const nx = clamp(x / this.scene.width, 0, 1);
-      const ny = clamp(y / this.scene.height, 0, 1);
-      const poly = this.actionDebugPolyForDrag(this.draggingActionVertex);
-      poly[this.draggingActionVertex.index] = { x: nx, y: ny };
-      this.drawActionDebugZones();
-      return;
-    }
+    if (this.zoneEditor?.handlePointerMove(x, y)) return;
+    if (this.actionEditor?.handlePointerMove(x, y)) return;
     if (this.draggingPerspectiveHandle) {
       const nx = clamp(x / this.scene.width, 0, 1);
       const ny = clamp(y / this.scene.height, 0, 1);
@@ -1005,16 +1012,10 @@ export class SpurenRoom implements Room {
   };
 
   private onStageUp = (ev: FederatedPointerEvent) => {
-    if (this.draggingVertex) {
-      this.draggingVertex = null;
-      return;
-    }
+    if (this.zoneEditor?.handlePointerUp()) return;
+    if (this.actionEditor?.handlePointerUp()) return;
     if (this.draggingPerspectiveHandle) {
       this.draggingPerspectiveHandle = null;
-      return;
-    }
-    if (this.draggingActionVertex) {
-      this.draggingActionVertex = null;
       return;
     }
     this.backHoldStartedAt = null;
@@ -1270,7 +1271,7 @@ export class SpurenRoom implements Room {
 
     this.arrivalTimers.push(window.setTimeout(() => {
       if (this.destroyed) return;
-      this.showArrivalOverlay(this.introLines);
+      this.arrivalOverlay.show(this.introLines);
       try { audioEngine.playOneShot(SPUREN_ASSETS.audio.spoken_intro, 0.82); } catch { /* still */ }
 
       void spokenIntroDuration.then((durationMs) => {
@@ -1278,7 +1279,7 @@ export class SpurenRoom implements Room {
         this.arrivalTimers.push(window.setTimeout(() => {
           if (this.destroyed) return;
           try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.48); } catch { /* still */ }
-          this.hideArrivalOverlay();
+          this.arrivalOverlay.hide();
           this.enableRoomActivity();
         }, durationMs));
       });
@@ -1353,218 +1354,59 @@ export class SpurenRoom implements Room {
     stage.on("pointerupoutside", this.onStageUp);
   }
 
-  private showArrivalOverlay(lines: string[]): void {
-    const overlay = this.ensureArrivalOverlay();
-    overlay.classList.remove("is-hiding");
-    overlay.classList.add("is-visible");
-    overlay.innerHTML = lines.map((line) => `<span>${escapeHtml(line)}</span>`).join("");
-  }
-
   private showExitOpenHint(): void {
     if (this.exitHintShown || this.destroyed) return;
     this.exitHintShown = true;
     try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.42); } catch { /* still */ }
-    this.showArrivalOverlay([this.exitHintText]);
-    this.arrivalTimers.push(window.setTimeout(() => this.hideArrivalOverlay(), 5200));
-  }
-
-  private ensureArrivalOverlay(): HTMLDivElement {
-    if (this.arrivalOverlay) return this.arrivalOverlay;
-    const overlay = document.createElement("div");
-    overlay.className = "room-intro-overlay";
-    overlay.setAttribute("aria-live", "polite");
-    const host = this.scene.app.canvas.parentElement ?? document.body;
-    host.appendChild(overlay);
-    this.arrivalOverlay = overlay;
-    return overlay;
-  }
-
-  private hideArrivalOverlay(immediate = false): void {
-    const overlay = this.arrivalOverlay;
-    if (!overlay) return;
-    if (immediate) {
-      overlay.remove();
-      this.arrivalOverlay = null;
-      return;
-    }
-    overlay.classList.add("is-hiding");
-    overlay.classList.remove("is-visible");
-    window.setTimeout(() => {
-      if (this.arrivalOverlay === overlay && overlay.classList.contains("is-hiding")) {
-        overlay.remove();
-        this.arrivalOverlay = null;
-      }
-    }, 1400);
+    this.arrivalOverlay.show([this.exitHintText]);
+    this.arrivalTimers.push(window.setTimeout(() => this.arrivalOverlay.hide(), 5200));
   }
 
   private onKey(ev: KeyboardEvent): void {
     if (!this.debugMode && !this.actionDebugMode && !this.perspectiveDebugMode) return;
-    if (this.perspectiveDebugMode) {
-      if (ev.key.toLowerCase() === "v") {
-        this.activePerspectiveHandle = "vanishing";
-        this.drawPerspectiveDebug();
-        return;
-      }
-      if (ev.key.toLowerCase() === "r") {
-        this.activePerspectiveHandle = "reference";
-        this.drawPerspectiveDebug();
-        return;
-      }
-      if (ev.key.toLowerCase() === "o") {
-        this.exportPerspectiveDebug();
-        return;
-      }
-      const step = ev.shiftKey ? 0.01 : 0.002;
-      if (ev.key === "ArrowLeft") {
-        this.nudgePerspectiveHandle(-step, 0);
-        ev.preventDefault();
-        return;
-      }
-      if (ev.key === "ArrowRight") {
-        this.nudgePerspectiveHandle(step, 0);
-        ev.preventDefault();
-        return;
-      }
-      if (ev.key === "ArrowUp") {
-        this.nudgePerspectiveHandle(0, -step);
-        ev.preventDefault();
-        return;
-      }
-      if (ev.key === "ArrowDown") {
-        this.nudgePerspectiveHandle(0, step);
-        ev.preventDefault();
-        return;
-      }
+    if (this.perspectiveDebugMode && this.handlePerspectiveKey(ev)) return;
+    if (this.actionEditor?.handleKey(ev)) return;
+    if (this.zoneEditor?.handleKey(ev)) return;
+  }
+
+  private handlePerspectiveKey(ev: KeyboardEvent): boolean {
+    const k = ev.key.toLowerCase();
+    if (k === "v") {
+      this.activePerspectiveHandle = "vanishing";
+      this.drawPerspectiveDebug();
+      return true;
     }
-    if (this.actionDebugMode) {
-      if (ev.key.toLowerCase() === "f") {
-        this.activeActionZone = "forward";
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key.toLowerCase() === "b") {
-        this.activeActionZone = "back";
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key.toLowerCase() === "c") {
-        this.activeActionZone = "candle";
-        this.ensureCandleSourcePoly(this.activeCandleSourceIndex);
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key.toLowerCase() === "t") {
-        this.activeActionZone = "stoneSource";
-        this.drawActionDebugZones();
-        return;
-      }
-      if (/^[1-3]$/.test(ev.key)) {
-        this.activeActionZone = "candle";
-        this.activeCandleSourceIndex = Number(ev.key) - 1;
-        this.ensureCandleSourcePoly(this.activeCandleSourceIndex);
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key.toLowerCase() === "a") {
-        const poly = this.activeActionDebugPoly();
-        poly.push({ ...this.lastPointerNorm });
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key.toLowerCase() === "n") {
-        const poly = this.activeActionDebugPoly();
-        insertPointOnNearestEdge(poly, this.lastPointerNorm);
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key.toLowerCase() === "m") {
-        const poly = this.activeActionDebugPoly();
-        subdividePoly(poly);
-        this.drawActionDebugZones();
-        return;
-      }
-      if (ev.key === "Backspace" || ev.key === "Delete") {
-        const poly = this.activeActionDebugPoly();
-        if (poly.length <= 3) return;
-        const idx = nearestVertexIndex(this.lastPointerNorm, poly);
-        poly.splice(idx, 1);
-        this.drawActionDebugZones();
-        ev.preventDefault();
-        return;
-      }
-      if (ev.key.toLowerCase() === "p") {
-        this.exportActionDebugPolys();
-        return;
-      }
+    if (k === "r") {
+      this.activePerspectiveHandle = "reference";
+      this.drawPerspectiveDebug();
+      return true;
     }
-    if (!this.debugMode) return;
-    if (ev.key.toLowerCase() === "w") {
-      this.activeZone = "water";
-      this.drawDebugZones();
-      return;
+    if (k === "o") {
+      this.exportPerspectiveDebug();
+      return true;
     }
-    if (ev.key.toLowerCase() === "d") {
-      this.activeZone = "way";
-      this.drawDebugZones();
-      return;
-    }
-    if (ev.key.toLowerCase() === "s") {
-      this.activeZone = "stone";
-      this.ensureStoneDropZone(this.activeStoneZoneIndex);
-      this.drawDebugZones();
-      return;
-    }
-    if (/^[1-3]$/.test(ev.key)) {
-      this.activeZone = "stone";
-      this.activeStoneZoneIndex = Number(ev.key) - 1;
-      this.ensureStoneDropZone(this.activeStoneZoneIndex);
-      this.drawDebugZones();
-      return;
-    }
-    if (ev.key.toLowerCase() === "a") {
-      const poly = this.activeDebugPoly();
-      poly.push({ ...this.lastPointerNorm });
-      this.drawDebugZones();
-      return;
-    }
-    if (ev.key.toLowerCase() === "n") {
-      const poly = this.activeDebugPoly();
-      insertPointOnNearestEdge(poly, this.lastPointerNorm);
-      this.drawDebugZones();
-      return;
-    }
-    if (ev.key.toLowerCase() === "m") {
-      const poly = this.activeDebugPoly();
-      subdividePoly(poly);
-      this.drawDebugZones();
-      return;
-    }
-    if (ev.key === "Backspace" || ev.key === "Delete") {
-      const poly = this.activeDebugPoly();
-      if (poly.length <= 3) return;
-      const idx = nearestVertexIndex(this.lastPointerNorm, poly);
-      poly.splice(idx, 1);
-      this.drawDebugZones();
+    const step = ev.shiftKey ? 0.01 : 0.002;
+    if (ev.key === "ArrowLeft") {
+      this.nudgePerspectiveHandle(-step, 0);
       ev.preventDefault();
-      return;
+      return true;
     }
-    if (ev.key.toLowerCase() === "p") {
-      this.exportDebugPolys();
+    if (ev.key === "ArrowRight") {
+      this.nudgePerspectiveHandle(step, 0);
+      ev.preventDefault();
+      return true;
     }
-  }
-
-  private activeDebugPoly(): NormPoint[] {
-    if (this.activeZone === "water") return this.waterPoly;
-    if (this.activeZone === "way") return this.wayDropZone;
-    this.ensureStoneDropZone(this.activeStoneZoneIndex);
-    return this.stoneDropZones[this.activeStoneZoneIndex];
-  }
-
-  private debugPolyForDrag(hit: { zone: DebugZoneKind; zoneIndex?: number }): NormPoint[] {
-    if (hit.zone === "water") return this.waterPoly;
-    if (hit.zone === "way") return this.wayDropZone;
-    this.ensureStoneDropZone(hit.zoneIndex ?? 0);
-    return this.stoneDropZones[hit.zoneIndex ?? 0];
+    if (ev.key === "ArrowUp") {
+      this.nudgePerspectiveHandle(0, -step);
+      ev.preventDefault();
+      return true;
+    }
+    if (ev.key === "ArrowDown") {
+      this.nudgePerspectiveHandle(0, step);
+      ev.preventDefault();
+      return true;
+    }
+    return false;
   }
 
   private ensureStoneDropZone(index: number): void {
@@ -1581,105 +1423,9 @@ export class SpurenRoom implements Room {
     }
   }
 
-  private findDebugVertex(x: number, y: number, thresholdPx: number): { zone: DebugZoneKind; zoneIndex?: number; index: number } | null {
-    const active = this.findVertexInPoly(this.activeDebugPoly(), x, y, thresholdPx);
-    if (active != null) {
-      return this.activeZone === "stone"
-        ? { zone: "stone", zoneIndex: this.activeStoneZoneIndex, index: active }
-        : { zone: this.activeZone, index: active };
-    }
-    const water = this.findVertexInPoly(this.waterPoly, x, y, thresholdPx);
-    if (water != null) return { zone: "water", index: water };
-    const way = this.findVertexInPoly(this.wayDropZone, x, y, thresholdPx);
-    if (way != null) return { zone: "way", index: way };
-    for (let zoneIndex = 0; zoneIndex < this.stoneDropZones.length; zoneIndex++) {
-      const stone = this.findVertexInPoly(this.stoneDropZones[zoneIndex], x, y, thresholdPx);
-      if (stone != null) return { zone: "stone", zoneIndex, index: stone };
-    }
-    return null;
-  }
-
-  private findVertexInPoly(poly: NormPoint[], x: number, y: number, thresholdPx: number): number | null {
-    for (let i = 0; i < poly.length; i++) {
-      const px = poly[i].x * this.scene.width;
-      const py = poly[i].y * this.scene.height;
-      if (Math.hypot(px - x, py - y) <= thresholdPx) return i;
-    }
-    return null;
-  }
-
-  private activeActionDebugPoly(): NormPoint[] {
-    if (this.activeActionZone === "forward") return this.forwardActionZone;
-    if (this.activeActionZone === "back") return this.backActionZone;
-    if (this.activeActionZone === "stoneSource") return this.stoneSourcePoly;
-    this.ensureCandleSourcePoly(this.activeCandleSourceIndex);
-    return this.candleSourcePolys[this.activeCandleSourceIndex];
-  }
-
-  private actionDebugPolyForDrag(hit: { zone: ActionZoneKind; zoneIndex?: number }): NormPoint[] {
-    if (hit.zone === "forward") return this.forwardActionZone;
-    if (hit.zone === "back") return this.backActionZone;
-    if (hit.zone === "stoneSource") return this.stoneSourcePoly;
-    this.ensureCandleSourcePoly(hit.zoneIndex ?? 0);
-    return this.candleSourcePolys[hit.zoneIndex ?? 0];
-  }
-
   private ensureCandleSourcePoly(index: number): void {
     while (this.candleSourcePolys.length <= index) {
       this.candleSourcePolys.push(createRectPolyAround(this.lastPointerNorm, 0.05, 0.06));
-    }
-  }
-
-  private findActionDebugVertex(x: number, y: number, thresholdPx: number): { zone: ActionZoneKind; zoneIndex?: number; index: number } | null {
-    const active = this.findVertexInPoly(this.activeActionDebugPoly(), x, y, thresholdPx);
-    if (active != null) {
-      return this.activeActionZone === "candle"
-        ? { zone: "candle", zoneIndex: this.activeCandleSourceIndex, index: active }
-        : { zone: this.activeActionZone, index: active };
-    }
-    const forward = this.findVertexInPoly(this.forwardActionZone, x, y, thresholdPx);
-    if (forward != null) return { zone: "forward", index: forward };
-    const back = this.findVertexInPoly(this.backActionZone, x, y, thresholdPx);
-    if (back != null) return { zone: "back", index: back };
-    const stoneSource = this.findVertexInPoly(this.stoneSourcePoly, x, y, thresholdPx);
-    if (stoneSource != null) return { zone: "stoneSource", index: stoneSource };
-    for (let zoneIndex = 0; zoneIndex < this.candleSourcePolys.length; zoneIndex++) {
-      const candle = this.findVertexInPoly(this.candleSourcePolys[zoneIndex], x, y, thresholdPx);
-      if (candle != null) return { zone: "candle", zoneIndex, index: candle };
-    }
-    return null;
-  }
-
-  private drawDebugZones(): void {
-    if (!this.debugMode || !this.debugOverlay) return;
-    const g = this.debugOverlay;
-    g.clear();
-    drawPolyOverlay(g, this.toPixels(this.waterPoly), DEBUG_WATER_COLOR, this.activeZone === "water");
-    drawPolyOverlay(g, this.toPixels(this.wayDropZone), DEBUG_WAY_COLOR, this.activeZone === "way");
-    for (let i = 0; i < this.stoneDropZones.length; i++) {
-      drawPolyOverlay(
-        g,
-        this.toPixels(this.stoneDropZones[i]),
-        DEBUG_STONE_COLOR,
-        this.activeZone === "stone" && this.activeStoneZoneIndex === i,
-      );
-    }
-  }
-
-  private drawActionDebugZones(): void {
-    if (!this.actionDebugMode || !this.actionDebugOverlay) return;
-    const g = this.actionDebugOverlay;
-    g.clear();
-    drawPolyOverlay(g, this.toPixels(this.forwardActionZone), DEBUG_ACTION_FORWARD_COLOR, this.activeActionZone === "forward");
-    drawPolyOverlay(g, this.toPixels(this.backActionZone), DEBUG_ACTION_BACK_COLOR, this.activeActionZone === "back");
-    drawPolyOverlay(g, this.toPixels(this.stoneSourcePoly), DEBUG_ACTION_STONE_COLOR, this.activeActionZone === "stoneSource");
-    for (let i = 0; i < this.candleSourcePolys.length; i++) {
-      drawPolyOverlay(
-        g,
-        this.toPixels(this.candleSourcePolys[i]),
-        DEBUG_ACTION_CANDLE_COLOR,
-        this.activeActionZone === "candle" && this.activeCandleSourceIndex === i,
-      );
     }
   }
 
@@ -2092,208 +1838,4 @@ export class SpurenRoom implements Room {
     return false;
   }
 
-  private toPixels(poly: NormPoint[]): number[] {
-    const out: number[] = [];
-    for (const p of poly) out.push(p.x * this.scene.width, p.y * this.scene.height);
-    return out;
-  }
-
-}
-
-function pointInNormPolygon(x: number, y: number, poly: NormPoint[]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i].x;
-    const yi = poly[i].y;
-    const xj = poly[j].x;
-    const yj = poly[j].y;
-    const intersects = ((yi > y) !== (yj > y))
-      && (x < ((xj - xi) * (y - yi)) / ((yj - yi) || 1e-9) + xi);
-    if (intersects) inside = !inside;
-  }
-  return inside;
-}
-
-function pointInAnyNormPolygon(x: number, y: number, polys: NormPoint[][]): boolean {
-  for (const poly of polys) {
-    if (pointInNormPolygon(x, y, poly)) return true;
-  }
-  return false;
-}
-
-function randomPointInPoly(poly: NormPoint[]): NormPoint {
-  const xs = poly.map((p) => p.x);
-  const ys = poly.map((p) => p.y);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-
-  for (let i = 0; i < 40; i++) {
-    const x = minX + Math.random() * (maxX - minX);
-    const y = minY + Math.random() * (maxY - minY);
-    if (pointInNormPolygon(x, y, poly)) return { x, y };
-  }
-
-  const sx = poly.reduce((sum, p) => sum + p.x, 0) / poly.length;
-  const sy = poly.reduce((sum, p) => sum + p.y, 0) / poly.length;
-  return { x: sx, y: sy };
-}
-
-function randomPointInAnyPoly(polys: NormPoint[][]): NormPoint {
-  if (polys.length === 0) return { x: 0.5, y: 0.5 };
-  const poly = polys[Math.floor(Math.random() * polys.length)];
-  return randomPointInPoly(poly);
-}
-
-function randomNearbyPointInPoly(
-  poly: NormPoint[],
-  base: NormPoint,
-  maxOffset: number,
-  blockedPoly?: NormPoint[],
-): NormPoint {
-  for (let i = 0; i < 30; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.random() * maxOffset;
-    const x = base.x + Math.cos(angle) * dist;
-    const y = base.y + Math.sin(angle) * dist * 0.6;
-    if (pointInNormPolygon(x, y, poly) && !(blockedPoly && pointInNormPolygon(x, y, blockedPoly))) {
-      return { x, y };
-    }
-  }
-  return base;
-}
-
-function loadAudioDurationMs(url: string, fallbackMs: number): Promise<number> {
-  if (typeof Audio === "undefined") return Promise.resolve(fallbackMs);
-  return new Promise((resolve) => {
-    const audio = new Audio();
-    let settled = false;
-    const finish = (durationMs: number) => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      audio.removeAttribute("src");
-      audio.load();
-      resolve(durationMs);
-    };
-    const finishFromMetadata = () => {
-      const durationMs = Number.isFinite(audio.duration) && audio.duration > 0
-        ? Math.ceil(audio.duration * 1000)
-        : fallbackMs;
-      finish(durationMs);
-    };
-    const timeout = window.setTimeout(() => finish(fallbackMs), AUDIO_METADATA_TIMEOUT_MS);
-    audio.preload = "metadata";
-    audio.addEventListener("loadedmetadata", finishFromMetadata, { once: true });
-    audio.addEventListener("durationchange", finishFromMetadata, { once: true });
-    audio.addEventListener("canplaythrough", finishFromMetadata, { once: true });
-    audio.addEventListener("error", () => finish(fallbackMs), { once: true });
-    audio.src = url;
-    audio.load();
-  });
-}
-
-function drawPolyOverlay(
-  g: Graphics,
-  points: number[],
-  color: number,
-  active: boolean,
-): void {
-  g.poly(points, true).fill({ color, alpha: active ? 0.18 : 0.12 });
-  g.poly(points, true).stroke({ color, width: active ? 3 : 2, alpha: 0.9 });
-  for (let i = 0; i < points.length; i += 2) {
-    g.circle(points[i], points[i + 1], active ? 7 : 5).fill({ color, alpha: 0.95 });
-  }
-}
-
-function nearestVertexIndex(p: NormPoint, poly: NormPoint[]): number {
-  let idx = 0;
-  let bestDist = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < poly.length; i++) {
-    const d = Math.hypot(poly[i].x - p.x, poly[i].y - p.y);
-    if (d < bestDist) {
-      bestDist = d;
-      idx = i;
-    }
-  }
-  return idx;
-}
-
-function insertPointOnNearestEdge(poly: NormPoint[], p: NormPoint): void {
-  if (poly.length < 2) {
-    poly.push({ ...p });
-    return;
-  }
-  let bestEdgeStart = 0;
-  let bestDist = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < poly.length; i++) {
-    const j = (i + 1) % poly.length;
-    const d = distancePointToSegment(p, poly[i], poly[j]);
-    if (d < bestDist) {
-      bestDist = d;
-      bestEdgeStart = i;
-    }
-  }
-  poly.splice(bestEdgeStart + 1, 0, { ...p });
-}
-
-function subdividePoly(poly: NormPoint[]): void {
-  if (poly.length < 3) return;
-  const out: NormPoint[] = [];
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i];
-    const b = poly[(i + 1) % poly.length];
-    out.push(a);
-    out.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-  }
-  poly.length = 0;
-  poly.push(...out);
-}
-
-function distancePointToSegment(p: NormPoint, a: NormPoint, b: NormPoint): number {
-  const abx = b.x - a.x;
-  const aby = b.y - a.y;
-  const apx = p.x - a.x;
-  const apy = p.y - a.y;
-  const ab2 = abx * abx + aby * aby;
-  if (ab2 === 0) return Math.hypot(apx, apy);
-  const t = clamp((apx * abx + apy * aby) / ab2, 0, 1);
-  const qx = a.x + abx * t;
-  const qy = a.y + aby * t;
-  return Math.hypot(p.x - qx, p.y - qy);
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function smoothstep(value: number): number {
-  return value * value * (3 - 2 * value);
-}
-
-function createRectPolyAround(center: NormPoint, halfWidth: number, halfHeight: number): NormPoint[] {
-  return [
-    { x: clamp(center.x - halfWidth, 0, 1), y: clamp(center.y - halfHeight, 0, 1) },
-    { x: clamp(center.x + halfWidth, 0, 1), y: clamp(center.y - halfHeight, 0, 1) },
-    { x: clamp(center.x + halfWidth, 0, 1), y: clamp(center.y + halfHeight, 0, 1) },
-    { x: clamp(center.x - halfWidth, 0, 1), y: clamp(center.y + halfHeight, 0, 1) },
-  ];
-}
-
-function randomRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
-
-function randomHorizontalMirror(): 1 | -1 {
-  return Math.random() < 0.5 ? -1 : 1;
 }
