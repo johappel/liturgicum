@@ -83,6 +83,25 @@ export function RoomSettings(): JSX.Element {
     }
   }
 
+  async function createRoom(): Promise<void> {
+    const id = prompt("ID des neuen Raums (a-z, 0-9, _-):")?.trim();
+    if (!id) return;
+    if (!/^[a-z0-9][a-z0-9_-]*$/i.test(id)) {
+      setStatus({ kind: "err", msg: "Ungültige Raum-ID." });
+      return;
+    }
+    const title = prompt("Anzeigename des Raums:")?.trim() || id;
+    try {
+      await api.createRoom(id, title);
+      const list = await api.listRooms();
+      setRooms(list);
+      setRoomId(id);
+      setStatus({ kind: "ok", msg: "Raum angelegt → rooms/" + id + "/room.config.json" });
+    } catch (e) {
+      setStatus({ kind: "err", msg: String(e) });
+    }
+  }
+
   async function uploadAudio(file: File): Promise<void> {
     if (!config) return;
     try {
@@ -125,6 +144,7 @@ export function RoomSettings(): JSX.Element {
         <button disabled={!roomId} onClick={() => void loadRoom(roomId)}>
           Neu laden
         </button>
+        <button onClick={() => void createRoom()}>+ Neuer Raum</button>
         {dirty && <span className="status dirty">● ungespeichert</span>}
         {status.kind === "ok" && <span className="status ok">{status.msg}</span>}
         {status.kind === "err" && <span className="status err">⚠ {status.msg}</span>}
@@ -392,6 +412,13 @@ function InteractionsSection({
 }): JSX.Element {
   const defs = lib?.interactions ?? [];
   const zoneNames = Object.keys(config.zones);
+
+  function nextZoneName(): string {
+    let index = 1;
+    while (config.zones[`zone_${index}`]) index += 1;
+    return `zone_${index}`;
+  }
+
   function patch(i: number, p: Partial<InteractionInstanceConfig>): void {
     update({
       ...config,
@@ -400,16 +427,40 @@ function InteractionsSection({
   }
   function add(): void {
     const first = defs[0]?.id ?? "";
+    const zone = zoneNames[0] ?? nextZoneName();
     update({
       ...config,
+      zones: zoneNames[0]
+        ? config.zones
+        : {
+            ...config.zones,
+            [zone]: { polygons: [[]] },
+          },
       interactions: [
         ...config.interactions,
         {
           id: `interaction_${config.interactions.length + 1}`,
           interaction: first,
+          zone,
           enabled: true,
         },
       ],
+    });
+  }
+  function addZoneForInteraction(i: number): void {
+    const name = prompt("Name der neuen Zone (a-z, 0-9, _):", nextZoneName())?.trim();
+    if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
+    if (config.zones[name]) {
+      patch(i, { zone: name });
+      return;
+    }
+    update({
+      ...config,
+      zones: {
+        ...config.zones,
+        [name]: { polygons: [[]] },
+      },
+      interactions: config.interactions.map((x, idx) => (idx === i ? { ...x, zone: name } : x)),
     });
   }
   function remove(i: number): void {
@@ -456,14 +507,20 @@ function InteractionsSection({
               </div>
               <div className="field">
                 <label>Zone</label>
-                <select value={x.zone ?? ""} onChange={(ev) => patch(i, { zone: ev.target.value })}>
-                  <option value="">— keine —</option>
-                  {zoneNames.map((z) => (
-                    <option key={z} value={z}>
-                      {z}
-                    </option>
-                  ))}
-                </select>
+                <div className="row">
+                  <select value={x.zone ?? ""} onChange={(ev) => patch(i, { zone: ev.target.value })}>
+                    <option value="">— keine —</option>
+                    {zoneNames.map((z) => (
+                      <option key={z} value={z}>
+                        {z}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => addZoneForInteraction(i)}>+ Zone</button>
+                </div>
+                {zoneNames.length === 0 && (
+                  <p className="muted">Noch keine Zonen vorhanden. Mit "+ Zone" legst du direkt eine an und weist sie dieser Interaktion zu.</p>
+                )}
               </div>
             </div>
             {def && <p className="muted">{def.description}</p>}

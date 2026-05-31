@@ -63,6 +63,53 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+/** Findet die erste vorhandene Hintergrunddatei eines Raums (oder Default). */
+async function detectBackground(roomId: string): Promise<string> {
+  const dir = path.join(ROOMS_DIR, roomId);
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  const bg = entries.find(
+    (e) => e.isFile() && /^background.*\.(png|jpe?g|webp)$/i.test(e.name),
+  );
+  return bg?.name ?? "background.png";
+}
+
+/**
+ * Erzeugt eine vollständige, leere Default-Konfiguration für einen Raum.
+ * Dient als Vorlage, wenn noch keine `room.config.json` existiert (neuer oder
+ * unvollständiger Raum), sodass das Dashboard sofort editieren und speichern kann.
+ */
+function defaultRoomConfig(id: string, title: string, background: string): unknown {
+  return {
+    $schema: "../_schema/room.config.schema.json",
+    version: 1,
+    id,
+    title: title || id,
+    background,
+    ambient: [],
+    effects: [],
+    interactions: [],
+    zones: {},
+    perspective: {
+      vanishingPoint: { x: 0.5, y: 0.4 },
+      referencePoint: { x: 0.5, y: 0.92 },
+      minScale: 0.05,
+      nearScale: 0.9,
+    },
+    presence: {
+      enabled: false,
+      maxSpawns: 0,
+      firstDelayMsMin: 20000,
+      firstDelayMsMax: 30000,
+      kinds: [],
+      maxForeignTraceArtifacts: 0,
+    },
+    randomEvents: [],
+    intro: { enabled: false, durationMs: 12000, lines: [] },
+    speaker: { enabled: false, fallbackMs: 120000 },
+    dwellGate: { minDwellSeconds: 45, exitHint: "" },
+  };
+}
+
 /** Listet Raum-IDs (Verzeichnisse mit room.config.json oder background.png). */
 async function listRooms(): Promise<string[]> {
   const entries = await fs.readdir(ROOMS_DIR, { withFileTypes: true });
@@ -131,13 +178,44 @@ const routes: Route[] = [
     },
   },
   {
+    method: "POST",
+    pattern: /^\/api\/rooms$/,
+    handle: async (req, res) => {
+      const body = await readBody(req);
+      let payload: { id?: string; title?: string };
+      try {
+        payload = JSON.parse(body);
+      } catch {
+        return sendJson(res, 400, { error: "invalid JSON" });
+      }
+      const id = (payload.id ?? "").trim();
+      if (!isSafeSegment(id)) {
+        return sendJson(res, 400, { error: "invalid id (use a-z, 0-9, _-)" });
+      }
+      const dir = path.join(ROOMS_DIR, id);
+      const cfgPath = path.join(dir, "room.config.json");
+      if (await pathExists(cfgPath)) {
+        return sendJson(res, 409, { error: "room already exists" });
+      }
+      await fs.mkdir(path.join(dir, "audio"), { recursive: true });
+      await fs.mkdir(path.join(dir, "artifacts"), { recursive: true });
+      const cfg = defaultRoomConfig(id, payload.title ?? id, await detectBackground(id));
+      await fs.writeFile(cfgPath, JSON.stringify(cfg, null, 2) + "\n", "utf-8");
+      sendJson(res, 200, { ok: true, id, config: cfg });
+    },
+  },
+  {
     method: "GET",
     pattern: /^\/api\/rooms\/([^/]+)\/config$/,
     handle: async (_req, res, m) => {
       const id = decodeURIComponent(m[1]);
       if (!isSafeSegment(id)) return sendJson(res, 400, { error: "invalid id" });
       const p = path.join(ROOMS_DIR, id, "room.config.json");
-      if (!(await pathExists(p))) return sendJson(res, 404, { error: "not found" });
+      if (!(await pathExists(p))) {
+        // Unvollständiger Raum: Default-Vorlage zurückgeben (noch nicht persistiert).
+        const cfg = defaultRoomConfig(id, id, await detectBackground(id));
+        return sendJson(res, 200, cfg);
+      }
       sendJson(res, 200, JSON.parse(await fs.readFile(p, "utf-8")));
     },
   },

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { RoomConfig, NormPointConfig } from "../config/types";
+import type { RoomConfig, NormPointConfig, PolygonConfig } from "../config/types";
 
 /**
  * Canvas-basierter Editor für Interaktionszonen (Polygone) und die
@@ -22,6 +22,7 @@ export function ZoneEditor({ config, onChange }: Props): JSX.Element {
   const [imgReady, setImgReady] = useState(false);
   const [mode, setMode] = useState<Mode>("zones");
   const zoneNames = useMemo(() => Object.keys(config.zones), [config.zones]);
+  const hasZones = zoneNames.length > 0;
   const [activeZone, setActiveZone] = useState<string>(zoneNames[0] ?? "");
   const [activePoly, setActivePoly] = useState(0);
   const drag = useRef<{ kind: "point" | "vp" | "rp"; poly?: number; idx?: number } | null>(null);
@@ -144,13 +145,15 @@ export function ZoneEditor({ config, onChange }: Props): JSX.Element {
       drag.current = hit;
       return;
     }
-    // Klick ins Leere im Zonenmodus → Punkt zur aktiven Polygon-Liste anhängen
+    // Klick ins Leere im Zonenmodus → Punkt zum nächstgelegenen Polygon anhängen.
     if (mode === "zones") {
       const next = structuredClone(config);
       const zone = next.zones[activeZone];
       if (!zone) return;
       if (!zone.polygons[activePoly]) zone.polygons[activePoly] = [];
-      zone.polygons[activePoly].push(np);
+      const target = nearestPolygonIndex(zone.polygons, np, activePoly);
+      if (target !== activePoly) setActivePoly(target);
+      zone.polygons[target].push(np);
       onChange(next);
     }
   }
@@ -213,6 +216,7 @@ export function ZoneEditor({ config, onChange }: Props): JSX.Element {
   }
 
   const polyCount = config.zones[activeZone]?.polygons.length ?? 0;
+  const hasPolygons = polyCount > 0;
 
   return (
     <div className="zone-editor">
@@ -230,22 +234,32 @@ export function ZoneEditor({ config, onChange }: Props): JSX.Element {
         </div>
         {mode === "zones" && (
           <>
-            <select value={activeZone} onChange={(e) => { setActiveZone(e.target.value); setActivePoly(0); }}>
+            <select
+              value={activeZone}
+              disabled={!hasZones}
+              onChange={(e) => { setActiveZone(e.target.value); setActivePoly(0); }}
+            >
+              {!hasZones && <option value="">Keine Zonen</option>}
               {zoneNames.map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>
               ))}
             </select>
-            <select value={activePoly} onChange={(e) => setActivePoly(Number(e.target.value))}>
+            <select
+              value={hasPolygons ? activePoly : ""}
+              disabled={!hasPolygons}
+              onChange={(e) => setActivePoly(Number(e.target.value))}
+            >
+              {!hasPolygons && <option value="">Kein Polygon</option>}
               {Array.from({ length: polyCount }, (_, i) => (
                 <option key={i} value={i}>
                   Polygon {i + 1}
                 </option>
               ))}
             </select>
-            <button onClick={addPolygon}>+ Polygon</button>
-            <button className="danger" onClick={removePolygon}>
+            <button onClick={addPolygon} disabled={!hasZones}>+ Polygon</button>
+            <button className="danger" onClick={removePolygon} disabled={!hasZones || !hasPolygons}>
               − Polygon
             </button>
             <button onClick={addZone}>+ Zone</button>
@@ -264,7 +278,9 @@ export function ZoneEditor({ config, onChange }: Props): JSX.Element {
       />
       <p className="muted">
         {mode === "zones"
-          ? "Klick ins Bild fügt einen Punkt zum aktiven Polygon hinzu · Punkt ziehen verschiebt · Rechtsklick auf Punkt löscht."
+          ? hasZones
+            ? "Klick ins Bild fügt einen Punkt zum aktiven Polygon hinzu · Punkt ziehen verschiebt · Rechtsklick auf Punkt löscht."
+            : "Dieser Raum hat noch keine Zonen. Mit '+ Zone' legst du die erste Zone an."
           : "Fluchtpunkt (VP) und Referenzpunkt (RP) ziehen, um die Bodenperspektive zu justieren."}
       </p>
     </div>
@@ -287,4 +303,29 @@ function clamp01(v: number): number {
 
 function dist(a: NormPointConfig, b: NormPointConfig): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/**
+ * Wählt das Polygon, an das ein neuer Punkt angehängt wird. Ist das aktive
+ * Polygon noch leer (Aufbau eines neuen Pfads), bleibt es das Ziel; sonst wird
+ * das Polygon mit dem nächstgelegenen Eckpunkt zum Klick gewählt.
+ */
+function nearestPolygonIndex(
+  polygons: PolygonConfig[],
+  point: NormPointConfig,
+  activeIdx: number,
+): number {
+  if (!polygons[activeIdx] || polygons[activeIdx].length === 0) return activeIdx;
+  let best = activeIdx;
+  let bestDist = Infinity;
+  polygons.forEach((poly, i) => {
+    for (const p of poly) {
+      const d = dist(p, point);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    }
+  });
+  return best;
 }

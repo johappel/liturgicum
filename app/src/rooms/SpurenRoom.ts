@@ -21,7 +21,7 @@ import { LeafEmitter } from "../effects/LeafEmitter";
 import { WaterRing } from "../effects/WaterRing";
 import type { BaseEffect } from "../effects/BaseEffect";
 import type { Room } from "./Room";
-import type { RoomConfig } from "../config/types";
+import type { RoomConfig, RandomEventConfig } from "../config/types";
 import { resolveAsset } from "../config/loadRoomConfig";
 
 const RIPE_AMBIENT_S = 45;
@@ -630,6 +630,9 @@ export class SpurenRoom implements Room {
   private maxForeignTraceArtifacts = MAX_FOREIGN_TRACE_ARTIFACTS;
   private firstPresenceMinMs = FIRST_PRESENCE_MIN_DELAY_MS;
   private firstPresenceMaxMs = FIRST_PRESENCE_MAX_DELAY_MS;
+  private configRoomId = "spuren";
+  private randomEvents: RandomEventConfig[] = [];
+  private randomEventTimers: number[] = [];
 
   constructor(private scene: Scene, private cb: SpurenRoomCallbacks = {}, config?: RoomConfig) {
     if (config) this.applyConfig(config);
@@ -637,6 +640,8 @@ export class SpurenRoom implements Room {
 
   /** Übernimmt die dashboard-editierbaren Werte aus der Raumkonfiguration. */
   private applyConfig(config: RoomConfig): void {
+    this.configRoomId = config.id || this.configRoomId;
+    this.randomEvents = Array.isArray(config.randomEvents) ? config.randomEvents : [];
     const z = config.zones ?? {};
     const poly0 = (name: string): NormPoint[] | undefined =>
       z[name]?.polygons?.[0]?.map((p) => ({ x: p.x, y: p.y }));
@@ -826,6 +831,8 @@ export class SpurenRoom implements Room {
       window.clearTimeout(this.presenceTimer);
       this.presenceTimer = null;
     }
+    for (const timer of this.randomEventTimers) window.clearTimeout(timer);
+    this.randomEventTimers = [];
     for (const timer of this.arrivalTimers) window.clearTimeout(timer);
     this.arrivalTimers = [];
     this.hideArrivalOverlay(true);
@@ -1290,7 +1297,42 @@ export class SpurenRoom implements Room {
       this.scheduleNextPresence();
     }, firstPresenceDelay + randomRange(7000, 12000)));
 
+    this.startRandomEvents();
     this.enableStageInteractions();
+  }
+
+  /**
+   * Plant alle aktivierten Zufallsereignisse des Raums. Jedes Ereignis wird
+   * unabhängig mit einem zufälligen Intervall (min..max) wiederholt eingeplant.
+   */
+  private startRandomEvents(): void {
+    if (this.suppressPresenceSpawns) return; // bei Wiederbesuch ruhiger Raum
+    for (const event of this.randomEvents) {
+      if (event?.enabled === false) continue;
+      this.scheduleRandomEvent(event);
+    }
+  }
+
+  private scheduleRandomEvent(event: RandomEventConfig): void {
+    const min = Math.max(0, event.intervalMsMin ?? 0);
+    const max = Math.max(min, event.intervalMsMax ?? min);
+    const delay = randomRange(min, max);
+    const timer = window.setTimeout(() => {
+      if (this.destroyed) return;
+      this.fireRandomEvent(event);
+      this.scheduleRandomEvent(event);
+    }, delay);
+    this.randomEventTimers.push(timer);
+  }
+
+  private fireRandomEvent(event: RandomEventConfig): void {
+    if (!event.ref) return;
+    if (event.kind === "sound") {
+      try {
+        audioEngine.playOneShot(resolveAsset(this.configRoomId, event.ref), 0.55);
+      } catch { /* still */ }
+    }
+    // kind === "interaction": generische Auslösung ist noch nicht verdrahtet.
   }
 
   private enableStageInteractions(): void {

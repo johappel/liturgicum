@@ -1,0 +1,84 @@
+{
+  "$schema": "../_schema/room.config.schema.json",
+  "version": 1,
+  "id": "hoeren",
+  "title": "hoeren",
+  "background": "background.png",
+  "ambient": [],
+  "effects": [],
+  "interactions": [
+    {
+      "id": "interaction_1",
+      "interaction": "water_rings",
+      "zone": "zone_1",
+      "enabled": true
+    }
+  ],
+  "zones": {
+    "zone_1": {
+      "polygons": [
+        [
+          {
+            "x": 0.4625779625779626,
+            "y": 0.6180811808118081
+          },
+          {
+            "x": 0.4802494802494803,
+            "y": 0.6328413284132841
+          },
+          {
+            "x": 0.5062370062370062,
+            "y": 0.6346863468634686
+          },
+          {
+            "x": 0.527027027027027,
+            "y": 0.6273062730627307
+          },
+          {
+            "x": 0.5,
+            "y": 0.6107011070110702
+          }
+        ]
+      ]
+    },
+    "wasser": {
+      "polygons": [
+        []
+      ]
+    }
+  },
+  "perspective": {
+    "vanishingPoint": {
+      "x": 0.5,
+      "y": 0.4
+    },
+    "referencePoint": {
+      "x": 0.5,
+      "y": 0.92
+    },
+    "minScale": 0.05,
+    "nearScale": 0.9
+  },
+  "presence": {
+    "enabled": false,
+    "maxSpawns": 0,
+    "firstDelayMsMin": 20000,
+    "firstDelayMsMax": 30000,
+    "kinds": [],
+    "maxForeignTraceArtifacts": 0
+  },
+  "randomEvents": [],
+  "intro": {
+    "enabled": false,
+    "durationMs": 12000,
+    "lines": []
+  },
+  "speaker": {
+    "enabled": false,
+    "fallbackMs": 120000
+  },
+  "dwellGate": {
+    "minDwellSeconds": 45,
+    "exitHint": ""
+  }
+}

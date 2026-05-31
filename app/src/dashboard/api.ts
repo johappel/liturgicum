@@ -38,6 +38,16 @@ export const api = {
     return data.rooms;
   },
 
+  async createRoom(id: string, title: string): Promise<{ id: string }> {
+    return jsonOrThrow<{ id: string }>(
+      await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, title }),
+      }),
+    );
+  },
+
   async getRoomConfig(id: string): Promise<RoomConfig> {
     return jsonOrThrow<RoomConfig>(await fetch(`/api/rooms/${encodeURIComponent(id)}/config`));
   },
