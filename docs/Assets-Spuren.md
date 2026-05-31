@@ -161,7 +161,7 @@ Alle Stems CC0 oder unter Pixabay-Content-Lizenz. Pro Datei in Phase 1.5 protoko
 | `water_ring.mp3` | Wasserimpuls + Hall-Tail | kurz | One-Shot bei Wasserberührung und Stein ins Wasser |
 | `hush.mp3` | leises Verschwinden / Luftzug | kurz | One-Shot beim Auflösen einer Silhouette |
 
-Alle ortsgebundenen One-Shots in `SpurenRoom` werden durch die Distanz zum kalibrierten Fluchtpunkt gedämpft: hinten sehr leise, nach vorne deutlicher.
+Alle ortsgebundenen One-Shots in `ConfigRoom` werden durch die Distanz zum kalibrierten Fluchtpunkt gedämpft: hinten sehr leise, nach vorne deutlicher.
 
 ## 5. Asset-Metadaten (`meta.json`)
 

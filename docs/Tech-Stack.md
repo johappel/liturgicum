@@ -133,7 +133,7 @@ Audio läuft über `Howler.js` in `app/src/audio/AudioEngine.ts`:
 - globale Master-Lautstärke und Mute über den Store,
 - Autoplay-sicherer Unlock beim ersten Pointer-Down.
 
-In `SpurenRoom` wird die One-Shot-Intensität zusätzlich aus der Raumposition berechnet. Der kalibrierte `GROUND_PERSPECTIVE.vanishingPoint` ist akustisch sehr leise; Richtung `referencePoint` steigt die Intensität weich an. Das ist eine einfache Tiefenheuristik, keine vollständige WebAudio-Panner-Simulation.
+In `ConfigRoom` wird die One-Shot-Intensität zusätzlich aus der Raumposition berechnet. Der kalibrierte `GROUND_PERSPECTIVE.vanishingPoint` ist akustisch sehr leise; Richtung `referencePoint` steigt die Intensität weich an. Das ist eine einfache Tiefenheuristik, keine vollständige WebAudio-Panner-Simulation.
 
 Der Spuren-Raum besitzt eine einmalige Ankommenssequenz pro Session. Sie nutzt dieselbe Audio-Engine:
 

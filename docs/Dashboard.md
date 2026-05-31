@@ -21,7 +21,7 @@ npm run dev
 flowchart LR
   DASH[Dashboard\ndashboard.html] -->|REST /api| SRV[Vite Dev-Plugin\nvite-plugin-config-server.ts]
   SRV -->|liest/schreibt| FS[(rooms/*\nroom.config.json\n_library/*.json)]
-  FS -->|loadRoomConfig| RT[Laufzeit\nSpurenRoom / RoomManager]
+  FS -->|loadRoomConfig| RT[Laufzeit\nConfigRoom / RoomManager]
 ```
 
 - **Datenmodell:** `app/src/config/types.ts` (`RoomConfig`) und
@@ -31,7 +31,7 @@ flowchart LR
 - **Gemeinsame Bibliotheken:** `rooms/_library/effects.json`,
   `interactions.json`, `silhouettes.json`, `general.json`.
 - **Laufzeit:** `RoomManager` lädt die Config per `loadRoomConfig()` und reicht
-  sie an `SpurenRoom` weiter; alle bisher hartcodierten Werte (Hintergrund,
+  sie an `ConfigRoom` weiter; alle bisher hartcodierten Werte (Hintergrund,
   Ambient, Effekte, Zonen, Perspektive, Intro, Präsenzen, Verweildauer) kommen
   jetzt aus der Config.
 
@@ -90,7 +90,7 @@ existierende Räume werden mit `409` abgewiesen.
 
 ## Zufallsereignisse zur Laufzeit
 
-In `room.config.json` definierte `randomEvents` werden im Spuren-Raum zur
+In `room.config.json` definierte `randomEvents` werden im `ConfigRoom` zur
 Laufzeit ausgelöst. Beim Aktivieren des Raums plant `startRandomEvents()` für
 jedes aktivierte Ereignis einen Timer im Intervall `[minIntervalMs,
 maxIntervalMs]`; nach jedem Auslösen wird neu geplant. `kind: "sound"` spielt

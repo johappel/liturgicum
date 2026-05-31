@@ -1,7 +1,7 @@
 # Debugging
 
 ## Ziel
-Diese Datei dokumentiert die aktuell verfuegbaren Debug-Werkzeuge fuer Raum-Kalibrierung in `SpurenRoom`.
+Diese Datei dokumentiert die aktuell verfuegbaren Debug-Werkzeuge fuer Raum-Kalibrierung in `ConfigRoom`.
 
 ## Zonen-Debug (`?debugZones=1`)
 Aktivierung:
@@ -99,7 +99,7 @@ Hinweis:
 - Richtung `referencePoint` steigen One-Shots weich auf ihre volle lokale Intensitaet.
 
 ## Wo Polygone in Spuren eintragen
-Die exportierten Werte aus den Debug-Modi werden in `app/src/rooms/SpurenRoom.ts` direkt in die Konstanten am Dateianfang eingetragen:
+Die exportierten Werte aus den Debug-Modi werden bevorzugt in `rooms/spuren/room.config.json` unter `zones` und `perspective` eingetragen. Die Fallback-Konstanten in `app/src/rooms/ConfigRoom.ts` bleiben nur als Sicherheitsnetz fuer fehlende Config-Dateien relevant.
 
 - `const WATER_POLY: NormPoint[] = [...]`
 - `const STONE_DROP_ZONES: NormPoint[][] = [...]`
@@ -117,9 +117,10 @@ Wichtig:
 Empfohlener Ablauf:
 - Szene mit `?debugZones=1` kalibrieren
 - mit `P` exportieren
-- exportierte Arrays in `WATER_POLY`, `STONE_DROP_ZONES` und `WAY_DROP_ZONE` in `app/src/rooms/SpurenRoom.ts` ersetzen
+- exportierte Arrays in `rooms/spuren/room.config.json` unter `zones.water`, `zones.stoneDrops` und `zones.way` eintragen
 - Szene mit `?debugActionZones=1` kalibrieren
-- exportierte Arrays in `GATE_POLY`, `BACK_ACTION_POLY`, `STONE_SOURCE_POLY` und `CANDLE_SOURCE_POLYS` ersetzen
+- exportierte Arrays in `rooms/spuren/room.config.json` unter `zones.forwardGate`, `zones.backAction`, `zones.stoneSource` und `zones.candleSources` eintragen
+- bei Perspektiv-Feintuning die exportierten Werte in `rooms/spuren/room.config.json` unter `perspective` speichern
 - danach Build/Test laufen lassen
 
 ## Wiederverwendung in weiteren Raeumen

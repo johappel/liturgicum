@@ -1,7 +1,7 @@
 # Graph Report - liturgicum  (2026-05-31)
 
 ## Corpus Check
-- 51 files · ~3,744,388 words
+- 51 files · ~3,746,272 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -58,8 +58,8 @@
   generate_prompt.py → tools\render_via_imagerouter.py
 - `to_imagerouter_body()` --calls--> `render_one()`  [INFERRED]
   generate_prompt.py → tools\render_via_imagerouter.py
-- `createRoom()` --calls--> `listRooms()`  [INFERRED]
-  app\src\dashboard\RoomSettings.tsx → app\vite-plugin-config-server.ts
+- `listRooms()` --calls--> `createRoom()`  [INFERRED]
+  app\vite-plugin-config-server.ts → app\src\dashboard\RoomSettings.tsx
 - `createStoneNode()` --calls--> `randomRange()`  [INFERRED]
   app\src\artifacts\ArtifactFactory.ts → app\src\common\mathUtils.ts
 

@@ -2,6 +2,24 @@
 
 Dieses Dokument fuehrt die umgesetzten Aenderungen fuer den Erprobungsraum Spuren als laufendes Arbeitsprotokoll.
 
+## 2026-05-31 - v0.3.1
+
+### Geaendert
+- Raum-Renderer konsolidiert: `app/src/rooms/SpurenRoom.ts` wurde final in `app/src/rooms/ConfigRoom.ts` ueberfuehrt.
+- Laufzeit ist jetzt konsequent config-getrieben ueber `rooms/<id>/room.config.json` (Assets, Zonen, Perspektive, Intro/Sprecher, Presence, Random Events).
+- Alte harte Referenzen auf `SpurenRoom` wurden in Dokumentation und Runtime-Hinweisen auf `ConfigRoom` umgestellt.
+
+### Entfernt
+- Nicht verwendete Altdatei `app/src/rooms/SpurenSimulator.ts` aus dem Quellbaum entfernt (keine Importe, keine Laufzeitnutzung).
+
+### Dokumentation
+- Aktualisiert:
+  - `docs/debugging.md`
+  - `docs/Dashboard.md`
+  - `docs/Assets-Spuren.md`
+  - `docs/Tech-Stack.md`
+  - `docs/TESTS/Erprobungsraum-Spuren.md`
+
 ## 2026-05-30 - v0.3.0
 
 ### Neu

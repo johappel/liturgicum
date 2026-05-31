@@ -1,7 +1,7 @@
 # Governance-Audit — Erprobungsraum „Spuren" (Phase 3)
 
 **Stand:** 2026-05-29
-**Geprüftes Artefakt:** Spuren-Raum in `app/src/rooms/SpurenRoom.ts` mit Übergangs- und Reife-Logik aus `app/src/rooms/RoomManager.ts`, `app/src/scene/Transition.ts`, `app/src/rooms/VorhofRoom.ts`, `app/src/rooms/HoerenRoom.ts`, `app/src/rooms/SpurenSimulator.ts`.
+**Geprüftes Artefakt:** Spuren-Raum in `app/src/rooms/ConfigRoom.ts` mit Übergangs- und Reife-Logik aus `app/src/rooms/RoomManager.ts`, `app/src/scene/Transition.ts`, `app/src/rooms/VorhofRoom.ts`, `app/src/rooms/HoerenRoom.ts`.
 **Prüfraster:** [docs/TESTS/Kontrollfragen.md](Kontrollfragen.md).
 
 Pro Abschnitt **Befund** + **Ampel** (Grün / Gelb / Rot) + ggf. **Maßnahme**.
@@ -48,7 +48,7 @@ Pro Abschnitt **Befund** + **Ampel** (Grün / Gelb / Rot) + ggf. **Maßnahme**.
 
 ## 10. Sinnhaftigkeit und Berufung
 
-**Befund:** Die eigene Geste verändert sichtbar den Raum (Flamme, Wellenkreis, Trace). Spurensimulator zeigt Mit-Anwesenheit. Kein Score. Ausgang nach Hören wird nicht als Belohnung gezeigt, sondern als Lichthof, der einlädt. **Ampel: Grün.**
+**Befund:** Die eigene Geste verändert sichtbar den Raum (Flamme, Wellenkreis, Trace). Presence-Spawns zeigen Mit-Anwesenheit ohne Identität. Kein Score. Ausgang nach Hören wird nicht als Belohnung gezeigt, sondern als Lichthof, der einlädt. **Ampel: Grün.**
 
 ## 11. Technik
 
