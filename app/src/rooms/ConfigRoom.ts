@@ -11,7 +11,7 @@ import {
   type GroundPerspectiveConfig,
 } from "../scene/perspectiveDebug";
 import { SPUREN_ASSETS } from "../assets/manifest";
-import { useStore, type LocalTrace, type PlacedArtifact } from "../state/store";
+import { useStore, type LocalTrace, type PlacedArtifact, type RoomId } from "../state/store";
 import { audioEngine } from "../audio/AudioEngine";
 import { FlameEmitter } from "../effects/FlameEmitter";
 import { SmokeEmitter } from "../effects/SmokeEmitter";
@@ -553,12 +553,12 @@ interface PresenceActor {
   onDone?: () => void;
 }
 
-export interface SpurenRoomCallbacks {
+export interface ConfigRoomCallbacks {
   onRequestForward?: () => void;
   onRequestBack?: () => void;
 }
 
-export class SpurenRoom extends BaseRoom {
+export class ConfigRoom extends BaseRoom {
   private effects: BaseEffect[] = [];
   private gcTimer: number | null = null;
   private presenceTimer: number | null = null;
@@ -622,6 +622,34 @@ export class SpurenRoom extends BaseRoom {
   private ambientFadeMs = 2500;
   private effectIntensity: Record<string, number> = { fog: 0.35, dust: 0.45, leaf: 0.42 };
   private effectEnabled: Record<string, boolean> = { fog: true, dust: true, leaf: true };
+  // Config-getriebene Asset-Pfade (Fallback = Spuren-Prototyp-Assets)
+  private stoneTexturePaths: string[] = [
+    SPUREN_ASSETS.artifacts.stone_loose_a,
+    SPUREN_ASSETS.artifacts.stone_loose_b,
+    SPUREN_ASSETS.artifacts.stone_loose_c,
+  ];
+  private candleTexturePaths: string[] = [
+    SPUREN_ASSETS.artifacts.candle_1,
+    SPUREN_ASSETS.artifacts.candle_2,
+    SPUREN_ASSETS.artifacts.candle_3,
+    SPUREN_ASSETS.artifacts.candle_4,
+  ];
+  private silhouettePaths: Record<PresenceKind, string> = {
+    walking: SPUREN_ASSETS.silhouettes.passing,
+    kneeling: SPUREN_ASSETS.silhouettes.kneeling,
+    seated: SPUREN_ASSETS.silhouettes.seated,
+  };
+  private waterRingSound = SPUREN_ASSETS.audio.water_ring;
+  private stoneDropSound = SPUREN_ASSETS.audio.stone_drop;
+  private candleBreathSound = SPUREN_ASSETS.audio.candle_breath;
+  private hushSound = SPUREN_ASSETS.audio.hush;
+  private arrivalIntroSound = SPUREN_ASSETS.audio.arrival_intro;
+  private spokenIntroSound = SPUREN_ASSETS.audio.spoken_intro;
+  private transitionCueSound = SPUREN_ASSETS.audio.chakra;
+  private exitOpenCueSound = SPUREN_ASSETS.audio.chakra;
+  private waterEnabled = true;
+  private stoneEnabled = true;
+  private candleEnabled = true;
   private introLines: string[] = ARRIVAL_TEXT;
   private introDurationMs = ARRIVAL_INTRO_MS;
   private exitDwellSeconds = RIPE_EXIT_S;
@@ -631,18 +659,18 @@ export class SpurenRoom extends BaseRoom {
   private maxForeignTraceArtifacts = MAX_FOREIGN_TRACE_ARTIFACTS;
   private firstPresenceMinMs = FIRST_PRESENCE_MIN_DELAY_MS;
   private firstPresenceMaxMs = FIRST_PRESENCE_MAX_DELAY_MS;
-  private configRoomId = "spuren";
+  private configRoomId: RoomId = "spuren";
   private randomEvents: RandomEventConfig[] = [];
   private randomEventTimers: number[] = [];
 
-  constructor(scene: Scene, private cb: SpurenRoomCallbacks = {}, config?: RoomConfig) {
+  constructor(scene: Scene, private cb: ConfigRoomCallbacks = {}, config?: RoomConfig) {
     super(scene);
     if (config) this.applyConfig(config);
   }
 
   /** Übernimmt die dashboard-editierbaren Werte aus der Raumkonfiguration. */
   private applyConfig(config: RoomConfig): void {
-    this.configRoomId = config.id || this.configRoomId;
+    this.configRoomId = (config.id as RoomId) || this.configRoomId;
     this.randomEvents = Array.isArray(config.randomEvents) ? config.randomEvents : [];
     const z = config.zones ?? {};
     const poly0 = (name: string): NormPoint[] | undefined =>
@@ -676,6 +704,9 @@ export class SpurenRoom extends BaseRoom {
       this.ambientSrc = resolveAsset(config.id, ambient.src);
       this.ambientFadeMs = ambient.fadeMs;
     }
+    this.applyInteractionAssets(config);
+    this.applyPresenceAssets(config);
+    this.applyCueAssets(config);
     for (const fx of config.effects ?? []) {
       this.effectEnabled[fx.effect] = fx.enabled;
       this.effectIntensity[fx.effect] = fx.intensity;
@@ -697,11 +728,68 @@ export class SpurenRoom extends BaseRoom {
     }
   }
 
+  /**
+   * Übernimmt Sound-, Artefakt- und Freischalt-Werte der konfigurierten
+   * Interaktionen (Wasser/Stein/Kerze). Fehlt eine Interaktion in der Config,
+   * bleiben die Prototyp-Defaults erhalten.
+   */
+  private applyInteractionAssets(config: RoomConfig): void {
+    const byType = (type: string) =>
+      (config.interactions ?? []).find((i) => i.interaction === type);
+
+    const water = byType("water_rings");
+    if (water) {
+      this.waterEnabled = water.enabled !== false;
+      if (water.sounds?.ring) this.waterRingSound = resolveAsset(config.id, water.sounds.ring);
+    }
+
+    const stone = byType("place_stone");
+    if (stone) {
+      this.stoneEnabled = stone.enabled !== false;
+      if (stone.sounds?.drop) this.stoneDropSound = resolveAsset(config.id, stone.sounds.drop);
+      const paths = (stone.artifacts ?? []).map((a) => resolveAsset(config.id, a));
+      if (paths.length) this.stoneTexturePaths = paths;
+    }
+
+    const candle = byType("light_candle");
+    if (candle) {
+      this.candleEnabled = candle.enabled !== false;
+      if (candle.sounds?.breath) this.candleBreathSound = resolveAsset(config.id, candle.sounds.breath);
+      // "unlit" ist der getragene Quell-Zustand und wird aus der zufälligen
+      // Platzierungsauswahl ausgenommen, damit nur entzündete Kerzen erscheinen.
+      const paths = (candle.artifacts ?? [])
+        .filter((a) => !/unlit/i.test(a))
+        .map((a) => resolveAsset(config.id, a));
+      if (paths.length) this.candleTexturePaths = paths;
+    }
+  }
+
+  /** Übernimmt Silhouetten-Pfade und den hush-Klang aus der Presence-Config. */
+  private applyPresenceAssets(config: RoomConfig): void {
+    const presence = config.presence;
+    if (!presence) return;
+    if (presence.hushSound) this.hushSound = resolveAsset(config.id, presence.hushSound);
+    for (const kind of presence.kinds ?? []) {
+      if (!kind?.silhouette) continue;
+      if (kind.kind === "walking" || kind.kind === "kneeling" || kind.kind === "seated") {
+        this.silhouettePaths[kind.kind] = resolveAsset(config.id, kind.silhouette);
+      }
+    }
+  }
+
+  /** Übernimmt Intro-/Sprecher-Audio und die optionalen Übergangs-Cues. */
+  private applyCueAssets(config: RoomConfig): void {
+    if (config.intro?.audio) this.arrivalIntroSound = resolveAsset(config.id, config.intro.audio);
+    if (config.speaker?.audio) this.spokenIntroSound = resolveAsset(config.id, config.speaker.audio);
+    if (config.cues?.transition) this.transitionCueSound = resolveAsset(config.id, config.cues.transition);
+    if (config.cues?.exitOpen) this.exitOpenCueSound = resolveAsset(config.id, config.cues.exitOpen);
+  }
+
   async mount(): Promise<void> {
     if (this.destroyed || !this.scene.isReady) return;
-    this.suppressPresenceSpawns = useStore.getState().visited.has("spuren")
-      && useStore.getState().roomIntrosSeen.has("spuren");
-    useStore.getState().enterRoom("spuren");
+    this.suppressPresenceSpawns = useStore.getState().visited.has(this.configRoomId)
+      && useStore.getState().roomIntrosSeen.has(this.configRoomId);
+    useStore.getState().enterRoom(this.configRoomId);
 
     try { audioEngine.crossfadeAmbient(this.ambientSrc, this.ambientFadeMs); } catch { /* still */ }
 
@@ -712,21 +800,16 @@ export class SpurenRoom extends BaseRoom {
     this.interactionsRoot = this.adopt(this.scene.layers.interactions);
 
     const bgTex = await Assets.load<Texture>(this.backgroundSrc);
-    this.stoneTextures = await Promise.all([
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_a),
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_b),
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.stone_loose_c),
-    ]);
-    this.candleTextures = await Promise.all([
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_1),
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_2),
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_3),
-      Assets.load<Texture>(SPUREN_ASSETS.artifacts.candle_4),
-    ]);
+    this.stoneTextures = await Promise.all(
+      this.stoneTexturePaths.map((p) => Assets.load<Texture>(p)),
+    );
+    this.candleTextures = await Promise.all(
+      this.candleTexturePaths.map((p) => Assets.load<Texture>(p)),
+    );
     const [passingTexture, kneelingTexture, seatedTexture] = await Promise.all([
-      Assets.load<Texture>(SPUREN_ASSETS.silhouettes.passing),
-      Assets.load<Texture>(SPUREN_ASSETS.silhouettes.kneeling),
-      Assets.load<Texture>(SPUREN_ASSETS.silhouettes.seated),
+      Assets.load<Texture>(this.silhouettePaths.walking),
+      Assets.load<Texture>(this.silhouettePaths.kneeling),
+      Assets.load<Texture>(this.silhouettePaths.seated),
     ]);
     this.presenceTextures = {
       walking: passingTexture,
@@ -941,17 +1024,17 @@ export class SpurenRoom extends BaseRoom {
 
     if (this.held) return;
 
-    if (this.isInAnyPoly(x, y, this.candleSourcePolys)) {
+    if (this.candleEnabled && this.isInAnyPoly(x, y, this.candleSourcePolys)) {
       this.pickUpCandle(x, y);
       return;
     }
-    if (this.isInPoly(x, y, this.stoneSourcePoly)) {
+    if (this.stoneEnabled && this.isInPoly(x, y, this.stoneSourcePoly)) {
       this.pickUpStone(x, y);
       return;
     }
-    if (this.waterUnlocked && this.isInPoly(x, y, this.waterPoly)) {
+    if (this.waterEnabled && this.waterUnlocked && this.isInPoly(x, y, this.waterPoly)) {
       this.spawnWaterRipple(x, y, 0.62);
-      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.water_ring, this.effectVolumeAtPoint(0.5, x, y)); } catch { /* still */ }
+      try { audioEngine.playOneShot(this.waterRingSound, this.effectVolumeAtPoint(0.5, x, y)); } catch { /* still */ }
     }
   };
 
@@ -1018,7 +1101,7 @@ export class SpurenRoom extends BaseRoom {
           const flameScale = this.candleScaleForPoint(this.held.node.x, this.held.node.y);
           this.attachCandleFlame(this.held.node.x, this.held.node.y, 0.62, null, this.candleFlameOffsetForPoint(this.held.node.x, this.held.node.y), flameScale);
           this.addTrace("candle", this.held.node.x / this.scene.width, this.held.node.y / this.scene.height, null);
-          try { audioEngine.playOneShot(SPUREN_ASSETS.audio.candle_breath, this.effectVolumeAtPoint(0.5, this.held.node.x, this.held.node.y)); } catch { /* still */ }
+          try { audioEngine.playOneShot(this.candleBreathSound, this.effectVolumeAtPoint(0.5, this.held.node.x, this.held.node.y)); } catch { /* still */ }
         }
       } else {
         this.held.node.destroy({ children: true });
@@ -1076,7 +1159,7 @@ export class SpurenRoom extends BaseRoom {
     node.alpha = alpha;
     node.scale.set(this.stoneScaleForPoint(node.x, node.y) * (foreign ? 0.75 : 1));
     if (withSound) {
-      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.stone_drop, this.effectVolumeAtPoint(0.5, node.x, node.y)); } catch { /* still */ }
+      try { audioEngine.playOneShot(this.stoneDropSound, this.effectVolumeAtPoint(0.5, node.x, node.y)); } catch { /* still */ }
     }
     this.addTrace("stone", node.x / this.scene.width, node.y / this.scene.height, 240);
     this.rememberPlacedArtifact(node);
@@ -1186,24 +1269,24 @@ export class SpurenRoom extends BaseRoom {
 
   private shouldRunArrivalSequence(): boolean {
     if (this.debugMode || this.actionDebugMode || this.perspectiveDebugMode) return false;
-    return !useStore.getState().roomIntrosSeen.has("spuren");
+    return !useStore.getState().roomIntrosSeen.has(this.configRoomId);
   }
 
   private startArrivalSequence(): void {
-    useStore.getState().markRoomIntroSeen("spuren");
-    try { audioEngine.playOneShot(SPUREN_ASSETS.audio.arrival_intro, 0.68); } catch { /* still */ }
-    const spokenIntroDuration = loadAudioDurationMs(SPUREN_ASSETS.audio.spoken_intro, SPOKEN_INTRO_FALLBACK_MS);
+    useStore.getState().markRoomIntroSeen(this.configRoomId);
+    try { audioEngine.playOneShot(this.arrivalIntroSound, 0.68); } catch { /* still */ }
+    const spokenIntroDuration = loadAudioDurationMs(this.spokenIntroSound, SPOKEN_INTRO_FALLBACK_MS);
 
     this.arrivalTimers.push(window.setTimeout(() => {
       if (this.destroyed) return;
       this.arrivalOverlay.show(this.introLines);
-      try { audioEngine.playOneShot(SPUREN_ASSETS.audio.spoken_intro, 0.82); } catch { /* still */ }
+      try { audioEngine.playOneShot(this.spokenIntroSound, 0.82); } catch { /* still */ }
 
       void spokenIntroDuration.then((durationMs) => {
         if (this.destroyed) return;
         this.arrivalTimers.push(window.setTimeout(() => {
           if (this.destroyed) return;
-          try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.48); } catch { /* still */ }
+          try { audioEngine.playOneShot(this.transitionCueSound, 0.48); } catch { /* still */ }
           this.arrivalOverlay.hide();
           this.enableRoomActivity();
         }, durationMs));
@@ -1282,7 +1365,7 @@ export class SpurenRoom extends BaseRoom {
   private showExitOpenHint(): void {
     if (this.exitHintShown || this.destroyed) return;
     this.exitHintShown = true;
-    try { audioEngine.playOneShot(SPUREN_ASSETS.audio.chakra, 0.42); } catch { /* still */ }
+    try { audioEngine.playOneShot(this.exitOpenCueSound, 0.42); } catch { /* still */ }
     this.arrivalOverlay.show([this.exitHintText]);
     this.arrivalTimers.push(window.setTimeout(() => this.arrivalOverlay.hide(), 5200));
   }
@@ -1544,7 +1627,7 @@ export class SpurenRoom extends BaseRoom {
       }
 
       if (p.ageMs >= total) {
-        try { audioEngine.playOneShot(SPUREN_ASSETS.audio.hush, this.effectVolumeAtPoint(0.42, p.node.x, p.node.y)); } catch { /* still */ }
+        try { audioEngine.playOneShot(this.hushSound, this.effectVolumeAtPoint(0.42, p.node.x, p.node.y)); } catch { /* still */ }
         try { p.node.destroy({ children: true }); } catch { /* ignore */ }
         return false;
       }

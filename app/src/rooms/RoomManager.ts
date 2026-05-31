@@ -3,7 +3,7 @@ import { runTransition } from "../scene/Transition";
 import { useStore } from "../state/store";
 import { HOEREN_ASSETS } from "../assets/manifest";
 import { VorhofRoom } from "./VorhofRoom";
-import { SpurenRoom } from "./SpurenRoom";
+import { ConfigRoom } from "./ConfigRoom";
 import { HoerenRoom } from "./HoerenRoom";
 import type { Room } from "./Room";
 import type { RoomId } from "../state/store";
@@ -77,7 +77,7 @@ export class RoomManager {
       case "vorhof":
         return new VorhofRoom(this.scene);
       case "spuren":
-        return new SpurenRoom(this.scene, {
+        return new ConfigRoom(this.scene, {
           onRequestForward: () => { void this.goHoeren(); },
           onRequestBack: () => { void this.goVorhof(); },
         }, this.spurenConfig ?? undefined);

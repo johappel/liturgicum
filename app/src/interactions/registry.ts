@@ -1,7 +1,7 @@
 /**
  * Deskriptor-Registratur der im Spuren-Prototyp implementierten Interaktionen.
  *
- * Die eigentliche Interaktionslogik lebt (noch) in SpurenRoom. Diese Registry
+ * Die eigentliche Interaktionslogik lebt (noch) in ConfigRoom. Diese Registry
  * macht die implementierten Interaktionen für ConfigRoom/Dashboard adressierbar
  * und markiert, welche Bibliothekseinträge bereits lauffähig sind.
  */

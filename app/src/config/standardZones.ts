@@ -3,7 +3,7 @@
  *
  * Diese Namen sind die einzige Quelle der Wahrheit für die wiederkehrenden
  * Klick-/Bodenbereiche. Das Dashboard legt sie für neue Räume vor, der
- * Laufzeit-Renderer (SpurenRoom) liest sie unter exakt diesen Namen aus.
+ * Laufzeit-Renderer (ConfigRoom) liest sie unter exakt diesen Namen aus.
  */
 
 export interface StandardZoneSpec {

@@ -3,7 +3,7 @@
  *
  * Dieses Modell ist die einzige Quelle der Wahrheit für alles, was sich über das
  * Konfigurations-Dashboard einstellen lässt. Zur Laufzeit lädt der Raum-Renderer
- * (SpurenRoom / ConfigRoom) seine Werte aus `rooms/<id>/room.config.json`, das
+ * (ConfigRoom) seine Werte aus `rooms/<id>/room.config.json`, das
  * exakt diese Struktur besitzt. Das Dashboard schreibt dieselbe Struktur zurück.
  *
  * Provenienz/Lizenz der Asset-Dateien bleibt getrennt in `rooms/<id>/meta.json`.
@@ -154,6 +154,14 @@ export interface DwellGateConfig {
   exitHint: string;
 }
 
+/** Kurze Signalklänge (Chimes), die der Raum bei Übergängen abspielt. */
+export interface CuesConfig {
+  /** Klang nach dem Intro / beim Übergang in die Aktivität. */
+  transition?: string;
+  /** Klang, wenn der Ausgang/das nächste Portal freigeschaltet wird. */
+  exitOpen?: string;
+}
+
 /** Vollständige, dashboard-editierbare Konfiguration eines Raums. */
 export interface RoomConfig {
   /** Schema-Version für Migrationen. */
@@ -184,4 +192,6 @@ export interface RoomConfig {
   speaker: SpeakerConfig;
   /** Freischalt-Bedingung für das nächste Portal. */
   dwellGate: DwellGateConfig;
+  /** Optionale Übergangs-/Signalklänge. */
+  cues?: CuesConfig;
 }

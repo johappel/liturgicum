@@ -374,7 +374,7 @@ function buildAgentPrompt(type: string, name: string, description: string): stri
       "- Zonen sind normalisierte Polygone (`NormPoint[]`) aus der Raumkonfiguration.",
       "",
       "## Schritte",
-      "1. Interaktionslogik implementieren (Aufnahme/Tragen/Ablegen bzw. Tap), analog zu den Handlern in `app/src/rooms/SpurenRoom.ts`.",
+      "1. Interaktionslogik implementieren (Aufnahme/Tragen/Ablegen bzw. Tap), analog zu den Handlern in `app/src/rooms/ConfigRoom.ts`.",
       "2. Eintrag in `app/src/interactions/registry.ts` ergänzen (`implemented: true`).",
       "3. Bibliothekseintrag in `rooms/_library/interactions.json` auf `source: \"builtin\"` setzen und `implementation` füllen.",
       "4. Mit `npm run build` und `npm run test` verifizieren.",
