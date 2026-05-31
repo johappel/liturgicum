@@ -20,13 +20,19 @@ import { DustEmitter } from "../effects/DustEmitter";
 import { LeafEmitter } from "../effects/LeafEmitter";
 import { WaterRing } from "../effects/WaterRing";
 import type { BaseEffect } from "../effects/BaseEffect";
-import type { Room } from "./Room";
+import { BaseRoom } from "./BaseRoom";
 import type { RoomConfig, RandomEventConfig } from "../config/types";
 import { resolveAsset } from "../config/loadRoomConfig";
-import { clamp, randomHorizontalMirror, randomRange, smoothstep } from "../common/mathUtils";
+import { clamp, randomRange, smoothstep } from "../common/mathUtils";
 import { ArrivalOverlay } from "../ui/ArrivalOverlay";
 import { loadAudioDurationMs } from "../audio/audioDuration";
 import { PolygonZoneEditor } from "../debug/PolygonZoneEditor";
+import {
+  createCandleNode,
+  createPresenceNode,
+  createStoneNode,
+  type PresenceKind,
+} from "../artifacts/ArtifactFactory";
 import {
   createRectPolyAround,
   pointInAnyNormPolygon,
@@ -528,18 +534,11 @@ const GROUND_PERSPECTIVE: GroundPerspectiveConfig = {
   minScale: 0.0025,
   nearScale: 0.89
 };
-const PRESENCE_BASE_HEIGHT: Record<PresenceKind, number> = {
-  walking: 460,
-  kneeling: 380,
-  seated: 340,
-};
 
 interface HeldItem {
   kind: "stone" | "candle";
   node: Container;
 }
-
-type PresenceKind = "walking" | "kneeling" | "seated";
 
 interface PresenceActor {
   kind: PresenceKind;
@@ -559,19 +558,15 @@ export interface SpurenRoomCallbacks {
   onRequestBack?: () => void;
 }
 
-export class SpurenRoom implements Room {
+export class SpurenRoom extends BaseRoom {
   private effects: BaseEffect[] = [];
-  private detachTick?: () => void;
-  private destroyed = false;
   private gcTimer: number | null = null;
-  private resizeHandler: (() => void) | null = null;
   private presenceTimer: number | null = null;
   private arrivalTimers: number[] = [];
   private readonly arrivalOverlay = new ArrivalOverlay(
     () => this.scene.app.canvas.parentElement ?? document.body,
   );
 
-  private ownedContainers: Container[] = [];
   private artifactsRoot: Container | null = null;
   private interactionsRoot: Container | null = null;
 
@@ -640,7 +635,8 @@ export class SpurenRoom implements Room {
   private randomEvents: RandomEventConfig[] = [];
   private randomEventTimers: number[] = [];
 
-  constructor(private scene: Scene, private cb: SpurenRoomCallbacks = {}, config?: RoomConfig) {
+  constructor(scene: Scene, private cb: SpurenRoomCallbacks = {}, config?: RoomConfig) {
+    super(scene);
     if (config) this.applyConfig(config);
   }
 
@@ -834,10 +830,9 @@ export class SpurenRoom implements Room {
 
     this.restorePlacedArtifacts();
 
-    this.resizeHandler = fitBackground;
-    window.addEventListener("resize", fitBackground);
+    this.onResize(fitBackground);
 
-    this.detachTick = this.scene.onTick((dt) => {
+    this.startTick((dt) => {
       for (const e of this.effects) e.tick(dt);
       if (this.roomActivityEnabled) {
         const s = useStore.getState();
@@ -857,10 +852,7 @@ export class SpurenRoom implements Room {
     }
   }
 
-  destroy(): void {
-    if (this.destroyed) return;
-    this.destroyed = true;
-
+  protected onDestroy(): void {
     if (this.gcTimer != null) {
       window.clearInterval(this.gcTimer);
       this.gcTimer = null;
@@ -874,13 +866,7 @@ export class SpurenRoom implements Room {
     for (const timer of this.arrivalTimers) window.clearTimeout(timer);
     this.arrivalTimers = [];
     this.arrivalOverlay.hide(true);
-    if (this.resizeHandler) {
-      window.removeEventListener("resize", this.resizeHandler);
-      this.resizeHandler = null;
-    }
     window.removeEventListener("keydown", this.keyHandler);
-
-    this.detachTick?.();
 
     try {
       const stage = this.scene.app.stage;
@@ -914,19 +900,8 @@ export class SpurenRoom implements Room {
     try { this.perspectiveDebugOverlay?.destroy(); } catch { /* ignore */ }
     this.perspectiveDebugOverlay = null;
 
-    for (const c of this.ownedContainers) {
-      try { c.destroy({ children: true }); } catch { /* ignore */ }
-    }
-    this.ownedContainers = [];
     this.artifactsRoot = null;
     this.interactionsRoot = null;
-  }
-
-  private adopt(parent: Container): Container {
-    const c = new Container();
-    parent.addChild(c);
-    this.ownedContainers.push(c);
-    return c;
   }
 
   private onStageDown = (ev: FederatedPointerEvent) => {
@@ -1074,61 +1049,11 @@ export class SpurenRoom implements Room {
   }
 
   private createStoneNode(): Container {
-    const c = new Container();
-    const shadow = new Graphics();
-    shadow.ellipse(2, 0, 34, 7).fill({ color: 0x050403, alpha: 0.34 });
-    const textures = this.stoneTextures.length > 0
-      ? this.stoneTextures
-      : [Texture.WHITE];
-    const tex = textures[Math.floor(Math.random() * textures.length)];
-    const stone = new Sprite(tex);
-    stone.anchor.set(0.5, 1);
-    stone.y = 20;
-    if (tex === Texture.WHITE) {
-      stone.tint = 0x57524a;
-      stone.width = 72;
-      stone.height = 46;
-      stone.alpha = 0.9;
-      const sizeFactor = randomRange(0.72, 1.26);
-      stone.scale.x *= randomHorizontalMirror() * sizeFactor;
-      stone.scale.y *= sizeFactor;
-    } else {
-      const target = 92 * randomRange(0.72, 1.26);
-      const side = Math.max(tex.width, tex.height) || 1;
-      const scale = target / side;
-      stone.scale.set(scale * randomHorizontalMirror(), scale);
-    }
-    c.addChild(shadow, stone);
-    return c;
+    return createStoneNode(this.stoneTextures);
   }
 
   private createCandleNode(): Container {
-    const c = new Container();
-    const shadow = new Graphics();
-    shadow.ellipse(0, 0, 18, 5).fill({ color: 0x050403, alpha: 0.26 });
-    const heightFactor = 0.84 + Math.random() * 0.34;
-    const widthFactor = 0.82 + Math.random() * 0.34;
-    const textures = this.candleTextures.length > 0
-      ? this.candleTextures
-      : [Texture.WHITE];
-    const tex = textures[Math.floor(Math.random() * textures.length)];
-    if (tex !== Texture.WHITE) {
-      const candle = new Sprite(tex);
-      candle.anchor.set(0.5, 1);
-      const targetHeight = 82 * heightFactor;
-      candle.scale.set(targetHeight / Math.max(tex.height, 1));
-      candle.scale.x *= widthFactor * randomHorizontalMirror();
-      c.addChild(shadow, candle);
-      return c;
-    }
-    const body = new Graphics();
-    const bodyWidth = 12 * widthFactor;
-    const bodyHeight = 22 * heightFactor;
-    body.roundRect(-bodyWidth / 2, -bodyHeight + 6, bodyWidth, bodyHeight, 4).fill({ color: 0xf4e0ba, alpha: 0.94 });
-    const wick = new Graphics();
-    wick.roundRect(-1, -bodyHeight - 2, 2, 5, 1).fill({ color: 0x2c2418, alpha: 0.9 });
-    c.addChild(shadow, body, wick);
-    return c;
+    return createCandleNode(this.candleTextures);
   }
 
   private placeGroundStone(
@@ -1594,42 +1519,7 @@ export class SpurenRoom implements Room {
   }
 
   private createPresenceNode(kind: PresenceKind): Container {
-    const c = new Container();
-    const shadow = new Graphics();
-    shadow.ellipse(0, 0, kind === "walking" ? 34 : 28, 7).fill({ color: 0x000000, alpha: 0.16 });
-    const texture = this.presenceTextures[kind];
-    if (texture) {
-      const sprite = new Sprite(texture);
-      sprite.anchor.set(0.5, 1);
-      const targetHeight = PRESENCE_BASE_HEIGHT[kind];
-      sprite.scale.set(targetHeight / Math.max(texture.height, 1));
-      sprite.scale.x *= randomHorizontalMirror();
-      sprite.alpha = 0.9;
-      c.addChild(shadow, sprite);
-      return c;
-    }
-
-    const g = new Graphics();
-    if (kind === "walking") {
-      g.scale.x = randomHorizontalMirror();
-      g.ellipse(0, -30, 11, 13).fill({ color: 0xe6e2d8, alpha: 0.36 });
-      g.roundRect(-10, -18, 20, 38, 8).fill({ color: 0xe0dbcf, alpha: 0.3 });
-      g.roundRect(-13, 14, 8, 28, 5).fill({ color: 0xd8d2c8, alpha: 0.24 });
-      g.roundRect(5, 14, 8, 28, 5).fill({ color: 0xd8d2c8, alpha: 0.24 });
-    } else if (kind === "kneeling") {
-      g.scale.x = randomHorizontalMirror();
-      g.ellipse(-8, 13, 18, 10).fill({ color: 0xe0dbcf, alpha: 0.28 });
-      g.roundRect(-18, -12, 28, 30, 8).fill({ color: 0xe0dbcf, alpha: 0.28 });
-      g.ellipse(8, -20, 9, 10).fill({ color: 0xe6e2d8, alpha: 0.34 });
-    } else {
-      g.scale.x = randomHorizontalMirror();
-      g.ellipse(0, 15, 20, 11).fill({ color: 0xe0dbcf, alpha: 0.26 });
-      g.roundRect(-18, -20, 36, 28, 8).fill({ color: 0xe0dbcf, alpha: 0.26 });
-      g.ellipse(0, -30, 10, 11).fill({ color: 0xe6e2d8, alpha: 0.34 });
-    }
-
-    c.addChild(shadow, g);
-    return c;
+    return createPresenceNode(kind, this.presenceTextures[kind]);
   }
 
   private tickPresences(dt: number): void {
