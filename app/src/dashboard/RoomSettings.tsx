@@ -13,9 +13,15 @@ import type {
   SilhouettesLibrary,
 } from "../config/libraryTypes";
 import { api, fileToBase64, type AssetListing } from "./api";
+import { GenerateAudioModal } from "./GenerateAudioModal";
 import { ZoneEditor } from "./ZoneEditor";
 
-/** Editor für die raum-spezifischen Einstellungen (ROOM SETTINGS). */
+type AudioTarget =
+  | { kind: "ambient"; index: number }
+  | { kind: "event"; index: number }
+  | { kind: "intro" }
+  | { kind: "speaker" };
+
 export function RoomSettings(): JSX.Element {
   const [rooms, setRooms] = useState<string[]>([]);
   const [roomId, setRoomId] = useState<string>("");
@@ -29,6 +35,7 @@ export function RoomSettings(): JSX.Element {
     kind: "idle",
     msg: "",
   });
+  const [audioModal, setAudioModal] = useState<{ mode: "sfx" | "tts"; target: AudioTarget } | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -44,8 +51,8 @@ export function RoomSettings(): JSX.Element {
         setInteractionsLib(intr);
         setSilhouettesLib(sil);
         if (list.length) setRoomId(list[0]);
-      } catch (e) {
-        setStatus({ kind: "err", msg: String(e) });
+      } catch (error) {
+        setStatus({ kind: "err", msg: String(error) });
       }
     })();
   }, []);
@@ -57,9 +64,9 @@ export function RoomSettings(): JSX.Element {
       setAssets(ass);
       setDirty(false);
       setStatus({ kind: "idle", msg: "" });
-    } catch (e) {
+    } catch (error) {
       setConfig(null);
-      setStatus({ kind: "err", msg: String(e) });
+      setStatus({ kind: "err", msg: String(error) });
     }
   }, []);
 
@@ -72,14 +79,18 @@ export function RoomSettings(): JSX.Element {
     setDirty(true);
   }, []);
 
+  async function refreshAssets(currentRoomId: string): Promise<void> {
+    setAssets(await api.getAssets(currentRoomId));
+  }
+
   async function save(): Promise<void> {
     if (!config) return;
     try {
       await api.saveRoomConfig(config.id, config);
       setDirty(false);
-      setStatus({ kind: "ok", msg: "Gespeichert → rooms/" + config.id + "/room.config.json" });
-    } catch (e) {
-      setStatus({ kind: "err", msg: String(e) });
+      setStatus({ kind: "ok", msg: `Gespeichert Ã¢â€ â€™ rooms/${config.id}/room.config.json` });
+    } catch (error) {
+      setStatus({ kind: "err", msg: String(error) });
     }
   }
 
@@ -87,7 +98,7 @@ export function RoomSettings(): JSX.Element {
     const id = prompt("ID des neuen Raums (a-z, 0-9, _-):")?.trim();
     if (!id) return;
     if (!/^[a-z0-9][a-z0-9_-]*$/i.test(id)) {
-      setStatus({ kind: "err", msg: "Ungültige Raum-ID." });
+      setStatus({ kind: "err", msg: "UngÃƒÂ¼ltige Raum-ID." });
       return;
     }
     const title = prompt("Anzeigename des Raums:")?.trim() || id;
@@ -96,9 +107,9 @@ export function RoomSettings(): JSX.Element {
       const list = await api.listRooms();
       setRooms(list);
       setRoomId(id);
-      setStatus({ kind: "ok", msg: "Raum angelegt → rooms/" + id + "/room.config.json" });
-    } catch (e) {
-      setStatus({ kind: "err", msg: String(e) });
+      setStatus({ kind: "ok", msg: `Raum angelegt Ã¢â€ â€™ rooms/${id}/room.config.json` });
+    } catch (error) {
+      setStatus({ kind: "err", msg: String(error) });
     }
   }
 
@@ -107,10 +118,10 @@ export function RoomSettings(): JSX.Element {
     try {
       const b64 = await fileToBase64(file);
       const res = await api.uploadAsset(config.id, "audio", file.name, b64);
-      setStatus({ kind: "ok", msg: "Audio hochgeladen: " + res.path });
-      setAssets(await api.getAssets(config.id));
-    } catch (e) {
-      setStatus({ kind: "err", msg: String(e) });
+      setStatus({ kind: "ok", msg: `Audio hochgeladen: ${res.path}` });
+      await refreshAssets(config.id);
+    } catch (error) {
+      setStatus({ kind: "err", msg: String(error) });
     }
   }
 
@@ -119,22 +130,61 @@ export function RoomSettings(): JSX.Element {
     try {
       const b64 = await fileToBase64(file);
       const res = await api.uploadAsset(config.id, ".", file.name, b64);
-      setStatus({ kind: "ok", msg: "Hintergrund hochgeladen: " + res.path });
-      setAssets(await api.getAssets(config.id));
+      setStatus({ kind: "ok", msg: `Hintergrund hochgeladen: ${res.path}` });
+      await refreshAssets(config.id);
       update({ ...config, background: file.name });
-    } catch (e) {
-      setStatus({ kind: "err", msg: String(e) });
+    } catch (error) {
+      setStatus({ kind: "err", msg: String(error) });
     }
   }
+
+  function openAudioModal(mode: "sfx" | "tts", target: AudioTarget): void {
+    setAudioModal({ mode, target });
+  }
+
+  async function handleAssignedAudio(path: string): Promise<void> {
+    if (!config || !audioModal) return;
+    const target = audioModal.target;
+    let next = config;
+    if (target.kind === "ambient") {
+      next = {
+        ...config,
+        ambient: config.ambient.map((entry, index) =>
+          index === target.index ? { ...entry, src: path } : entry,
+        ),
+      };
+    } else if (target.kind === "event") {
+      next = {
+        ...config,
+        randomEvents: config.randomEvents.map((entry, index) =>
+          index === target.index ? { ...entry, ref: path } : entry,
+        ),
+      };
+    } else if (target.kind === "intro") {
+      next = { ...config, intro: { ...config.intro, audio: path } };
+    } else {
+      next = { ...config, speaker: { ...config.speaker, audio: path } };
+    }
+    update(next);
+    await refreshAssets(config.id);
+    setStatus({ kind: "ok", msg: `Audio zugewiesen: ${path}` });
+  }
+
+  const initialModalText = (() => {
+    if (!config || !audioModal) return "";
+    if (audioModal.target.kind === "intro") return config.intro.lines.join("\n");
+    if (audioModal.target.kind === "speaker") return config.speaker.text ?? "";
+    return "";
+  })();
 
   return (
     <div>
       <div className="toolbar">
         <label className="muted">Raum:</label>
-        <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-          {rooms.map((r) => (
-            <option key={r} value={r}>
-              {r}
+        <select value={roomId} onChange={(event) => setRoomId(event.target.value)}>
+          {rooms.map((room) => (
+            <option key={room} value={room}>
+              {room}
             </option>
           ))}
         </select>
@@ -145,9 +195,9 @@ export function RoomSettings(): JSX.Element {
           Neu laden
         </button>
         <button onClick={() => void createRoom()}>+ Neuer Raum</button>
-        {dirty && <span className="status dirty">● ungespeichert</span>}
+        {dirty && <span className="status dirty">Ã¢â€”Â ungespeichert</span>}
         {status.kind === "ok" && <span className="status ok">{status.msg}</span>}
-        {status.kind === "err" && <span className="status err">⚠ {status.msg}</span>}
+        {status.kind === "err" && <span className="status err">Ã¢Å¡Â  {status.msg}</span>}
       </div>
 
       {!config ? (
@@ -159,34 +209,23 @@ export function RoomSettings(): JSX.Element {
             <div className="grid-2">
               <div className="field">
                 <label>Titel</label>
-                <input
-                  type="text"
-                  value={config.title}
-                  onChange={(e) => update({ ...config, title: e.target.value })}
-                />
+                <input type="text" value={config.title} onChange={(event) => update({ ...config, title: event.target.value })} />
               </div>
               <div className="field">
                 <label>Hintergrund (Datei in rooms/{config.id}/)</label>
-                <select
-                  value={config.background}
-                  onChange={(e) => update({ ...config, background: e.target.value })}
-                >
-                  {(assets?.background.length ? assets.background : [config.background]).map((b) => (
-                    <option key={b} value={b}>
-                      {b}
+                <select value={config.background} onChange={(event) => update({ ...config, background: event.target.value })}>
+                  {(assets?.background.length ? assets.background : [config.background]).map((background) => (
+                    <option key={background} value={background}>
+                      {background}
                     </option>
                   ))}
                 </select>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => e.target.files?.[0] && void uploadBackground(e.target.files[0])}
-                />
+                <input type="file" accept="image/*" onChange={(event) => event.target.files?.[0] && void uploadBackground(event.target.files[0])} />
               </div>
             </div>
           </section>
 
-          <AmbientSection config={config} assets={assets} update={update} onUpload={uploadAudio} />
+          <AmbientSection config={config} assets={assets} update={update} onUpload={uploadAudio} onGenerate={(index) => openAudioModal("sfx", { kind: "ambient", index })} />
           <EffectsSection config={config} lib={effectsLib} update={update} />
           <InteractionsSection config={config} lib={interactionsLib} update={update} />
 
@@ -196,8 +235,15 @@ export function RoomSettings(): JSX.Element {
           </section>
 
           <PresenceSection config={config} lib={silhouettesLib} update={update} />
-          <RandomEventsSection config={config} update={update} />
-          <IntroSpeakerSection config={config} assets={assets} update={update} onUpload={uploadAudio} />
+          <RandomEventsSection config={config} update={update} onGenerate={(index) => openAudioModal("sfx", { kind: "event", index })} />
+          <IntroSpeakerSection
+            config={config}
+            assets={assets}
+            update={update}
+            onUpload={uploadAudio}
+            onGenerateIntro={() => openAudioModal("tts", { kind: "intro" })}
+            onGenerateSpeaker={() => openAudioModal("tts", { kind: "speaker" })}
+          />
 
           <section className="panel">
             <h2>Verweildauer &amp; Portal</h2>
@@ -207,12 +253,10 @@ export function RoomSettings(): JSX.Element {
                 <input
                   type="number"
                   value={config.dwellGate.minDwellSeconds}
-                  onChange={(e) =>
-                    update({
-                      ...config,
-                      dwellGate: { ...config.dwellGate, minDwellSeconds: Number(e.target.value) },
-                    })
-                  }
+                  onChange={(event) => update({
+                    ...config,
+                    dwellGate: { ...config.dwellGate, minDwellSeconds: Number(event.target.value) },
+                  })}
                 />
               </div>
               <div className="field">
@@ -220,124 +264,119 @@ export function RoomSettings(): JSX.Element {
                 <input
                   type="text"
                   value={config.dwellGate.exitHint}
-                  onChange={(e) =>
-                    update({
-                      ...config,
-                      dwellGate: { ...config.dwellGate, exitHint: e.target.value },
-                    })
-                  }
+                  onChange={(event) => update({
+                    ...config,
+                    dwellGate: { ...config.dwellGate, exitHint: event.target.value },
+                  })}
                 />
               </div>
             </div>
           </section>
+
+          {audioModal && (
+            <GenerateAudioModal
+              open
+              roomId={config.id}
+              mode={audioModal.mode}
+              title={audioModal.mode === "sfx" ? "Sound generieren" : "TTS generieren"}
+              initialText={initialModalText}
+              onClose={() => setAudioModal(null)}
+              onAssigned={handleAssignedAudio}
+            />
+          )}
         </>
       )}
     </div>
   );
 }
 
-/* ---------- Ambient ---------- */
 function AmbientSection({
   config,
   assets,
   update,
   onUpload,
+  onGenerate,
 }: {
   config: RoomConfig;
   assets: AssetListing | null;
-  update: (c: RoomConfig) => void;
-  onUpload: (f: File) => void;
+  update: (config: RoomConfig) => void;
+  onUpload: (file: File) => void;
+  onGenerate: (index: number) => void;
 }): JSX.Element {
-  function patch(i: number, p: Partial<AudioLayerConfig>): void {
-    const ambient = config.ambient.map((a, idx) => (idx === i ? { ...a, ...p } : a));
-    update({ ...config, ambient });
+  function patch(index: number, part: Partial<AudioLayerConfig>): void {
+    update({
+      ...config,
+      ambient: config.ambient.map((entry, currentIndex) => (currentIndex === index ? { ...entry, ...part } : entry)),
+    });
   }
+
   function add(): void {
-    const ambient = [
-      ...config.ambient,
-      { id: `ambient_${config.ambient.length + 1}`, src: "", volume: 0.4, loop: true, fadeMs: 4000 },
-    ];
-    update({ ...config, ambient });
+    update({
+      ...config,
+      ambient: [
+        ...config.ambient,
+        { id: `ambient_${config.ambient.length + 1}`, src: "", volume: 0.4, loop: true, fadeMs: 4000 },
+      ],
+    });
   }
-  function remove(i: number): void {
-    update({ ...config, ambient: config.ambient.filter((_, idx) => idx !== i) });
+
+  function remove(index: number): void {
+    update({ ...config, ambient: config.ambient.filter((_, currentIndex) => currentIndex !== index) });
   }
-  const audioOpts = assets?.audio ?? [];
+
+  const audioOptions = assets?.audio ?? [];
   return (
     <section className="panel">
-      <h2>Ambiente-Klänge (low drone, people noise, church noise, Orgel …)</h2>
-      {config.ambient.map((a, i) => (
-        <div className="item" key={a.id}>
+      <h2>Ambiente-KlÃƒÂ¤nge (low drone, people noise, church noise, Orgel ...)</h2>
+      {config.ambient.map((entry, index) => (
+        <div className="item" key={entry.id}>
           <div className="item-head">
-            <strong>{a.id}</strong>
-            <button className="danger" onClick={() => remove(i)}>
-              Entfernen
-            </button>
+            <strong>{entry.id}</strong>
+            <div className="row">
+              <button type="button" onClick={() => onGenerate(index)}>SFX generieren</button>
+              <button className="danger" type="button" onClick={() => remove(index)}>Entfernen</button>
+            </div>
           </div>
           <div className="grid-2">
             <div className="field">
               <label>ID</label>
-              <input type="text" value={a.id} onChange={(e) => patch(i, { id: e.target.value })} />
+              <input type="text" value={entry.id} onChange={(event) => patch(index, { id: event.target.value })} />
             </div>
             <div className="field">
               <label>Audio-Datei</label>
-              <select value={a.src} onChange={(e) => patch(i, { src: e.target.value })}>
-                <option value="">— wählen —</option>
-                {[...new Set([...audioOpts, a.src].filter(Boolean))].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+              <select value={entry.src} onChange={(event) => patch(index, { src: event.target.value })}>
+                <option value="">Ã¢â‚¬â€ wÃƒÂ¤hlen Ã¢â‚¬â€</option>
+                {[...new Set([...audioOptions, entry.src].filter(Boolean))].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
                   </option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label>Lautstärke: {a.volume.toFixed(2)}</label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={a.volume}
-                onChange={(e) => patch(i, { volume: Number(e.target.value) })}
-              />
+              <label>LautstÃƒÂ¤rke: {entry.volume.toFixed(2)}</label>
+              <input type="range" min={0} max={1} step={0.01} value={entry.volume} onChange={(event) => patch(index, { volume: Number(event.target.value) })} />
             </div>
             <div className="field">
               <label>Fade (ms)</label>
-              <input
-                type="number"
-                value={a.fadeMs}
-                onChange={(e) => patch(i, { fadeMs: Number(e.target.value) })}
-              />
+              <input type="number" value={entry.fadeMs} onChange={(event) => patch(index, { fadeMs: Number(event.target.value) })} />
             </div>
           </div>
         </div>
       ))}
       <div className="row">
-        <button onClick={add}>+ Ambient-Ebene</button>
+        <button type="button" onClick={add}>+ Ambient-Ebene</button>
         <label className="muted">Audio hochladen:</label>
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])}
-        />
+        <input type="file" accept="audio/*" onChange={(event) => event.target.files?.[0] && onUpload(event.target.files[0])} />
       </div>
     </section>
   );
 }
 
-/* ---------- Effekte ---------- */
-function EffectsSection({
-  config,
-  lib,
-  update,
-}: {
-  config: RoomConfig;
-  lib: EffectsLibrary | null;
-  update: (c: RoomConfig) => void;
-}): JSX.Element {
+function EffectsSection({ config, lib, update }: { config: RoomConfig; lib: EffectsLibrary | null; update: (config: RoomConfig) => void }): JSX.Element {
   const defs = lib?.effects ?? [];
-  function patch(i: number, p: Partial<EffectInstanceConfig>): void {
-    update({ ...config, effects: config.effects.map((e, idx) => (idx === i ? { ...e, ...p } : e)) });
+  function patch(index: number, part: Partial<EffectInstanceConfig>): void {
+    update({ ...config, effects: config.effects.map((entry, currentIndex) => (currentIndex === index ? { ...entry, ...part } : entry)) });
   }
   function add(): void {
     const first = defs[0]?.id ?? "fog";
@@ -349,67 +388,45 @@ function EffectsSection({
       ],
     });
   }
-  function remove(i: number): void {
-    update({ ...config, effects: config.effects.filter((_, idx) => idx !== i) });
+  function remove(index: number): void {
+    update({ ...config, effects: config.effects.filter((_, currentIndex) => currentIndex !== index) });
   }
   return (
     <section className="panel">
-      <h2>Visuelle Effekt-Loops (Federn, Blätter, Lichter, Nebel, Regen …)</h2>
-      {config.effects.map((e, i) => (
-        <div className="item" key={e.id}>
+      <h2>Visuelle Effekt-Loops (Federn, BlÃƒÂ¤tter, Lichter, Nebel, Regen ...)</h2>
+      {config.effects.map((entry, index) => (
+        <div className="item" key={entry.id}>
           <div className="item-head">
             <div className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={e.enabled}
-                onChange={(ev) => patch(i, { enabled: ev.target.checked })}
-              />
-              <strong>{e.id}</strong>
+              <input type="checkbox" checked={entry.enabled} onChange={(event) => patch(index, { enabled: event.target.checked })} />
+              <strong>{entry.id}</strong>
             </div>
-            <button className="danger" onClick={() => remove(i)}>
-              Entfernen
-            </button>
+            <button className="danger" type="button" onClick={() => remove(index)}>Entfernen</button>
           </div>
           <div className="grid-2">
             <div className="field">
               <label>Effekt-Typ</label>
-              <select value={e.effect} onChange={(ev) => patch(i, { effect: ev.target.value })}>
-                {[...new Set([...defs.map((d) => d.id), e.effect])].map((id) => (
+              <select value={entry.effect} onChange={(event) => patch(index, { effect: event.target.value })}>
+                {[...new Set([...defs.map((def) => def.id), entry.effect])].map((id) => (
                   <option key={id} value={id}>
-                    {defs.find((d) => d.id === id)?.label ?? id}
+                    {defs.find((def) => def.id === id)?.label ?? id}
                   </option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label>Intensität: {e.intensity.toFixed(2)}</label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={e.intensity}
-                onChange={(ev) => patch(i, { intensity: Number(ev.target.value) })}
-              />
+              <label>IntensitÃƒÂ¤t: {entry.intensity.toFixed(2)}</label>
+              <input type="range" min={0} max={1} step={0.01} value={entry.intensity} onChange={(event) => patch(index, { intensity: Number(event.target.value) })} />
             </div>
           </div>
         </div>
       ))}
-      <button onClick={add}>+ Effekt</button>
+      <button type="button" onClick={add}>+ Effekt</button>
     </section>
   );
 }
 
-/* ---------- Interaktionen ---------- */
-function InteractionsSection({
-  config,
-  lib,
-  update,
-}: {
-  config: RoomConfig;
-  lib: InteractionsLibrary | null;
-  update: (c: RoomConfig) => void;
-}): JSX.Element {
+function InteractionsSection({ config, lib, update }: { config: RoomConfig; lib: InteractionsLibrary | null; update: (config: RoomConfig) => void }): JSX.Element {
   const defs = lib?.interactions ?? [];
   const zoneNames = Object.keys(config.zones);
 
@@ -419,7 +436,6 @@ function InteractionsSection({
     return `${base}_${index}`;
   }
 
-  /** Stellt sicher, dass alle übergebenen Zonennamen (leer) existieren. */
   function ensureZones(
     zones: Record<string, RoomConfig["zones"][string]>,
     names: (string | undefined)[],
@@ -431,17 +447,17 @@ function InteractionsSection({
     return next;
   }
 
-  function patch(i: number, p: Partial<InteractionInstanceConfig>): void {
+  function patch(index: number, part: Partial<InteractionInstanceConfig>): void {
     update({
       ...config,
-      interactions: config.interactions.map((x, idx) => (idx === i ? { ...x, ...p } : x)),
+      interactions: config.interactions.map((entry, currentIndex) => (currentIndex === index ? { ...entry, ...part } : entry)),
     });
   }
+
   function add(): void {
     const def = defs[0];
     const zone = def?.defaultZone ?? zoneNames[0] ?? nextZoneName();
-    const sourceZone =
-      def?.zoneKind === "drag_release" ? def?.defaultSourceZone : undefined;
+    const sourceZone = def?.zoneKind === "drag_release" ? def?.defaultSourceZone : undefined;
     update({
       ...config,
       zones: ensureZones(config.zones, [zone, sourceZone]),
@@ -457,110 +473,94 @@ function InteractionsSection({
       ],
     });
   }
-  /** Wechselt die Interaktion und übernimmt deren kanonische Default-Zonen. */
-  function changeInteraction(i: number, id: string): void {
-    const def = defs.find((d) => d.id === id);
-    const current = config.interactions[i];
+
+  function changeInteraction(index: number, id: string): void {
+    const def = defs.find((entry) => entry.id === id);
+    const current = config.interactions[index];
     const zone = current.zone || def?.defaultZone;
-    const sourceZone =
-      def?.zoneKind === "drag_release"
-        ? current.sourceZone || def?.defaultSourceZone
-        : undefined;
+    const sourceZone = def?.zoneKind === "drag_release" ? current.sourceZone || def?.defaultSourceZone : undefined;
     update({
       ...config,
       zones: ensureZones(config.zones, [zone, sourceZone]),
-      interactions: config.interactions.map((x, idx) =>
-        idx === i ? { ...x, interaction: id, zone, sourceZone } : x,
+      interactions: config.interactions.map((entry, currentIndex) =>
+        currentIndex === index ? { ...entry, interaction: id, zone, sourceZone } : entry,
       ),
     });
   }
-  function addZoneFor(i: number, field: "zone" | "sourceZone"): void {
+
+  function addZoneFor(index: number, field: "zone" | "sourceZone"): void {
     const base = field === "sourceZone" ? "source" : "zone";
     const name = prompt("Name der neuen Zone (a-z, 0-9, _):", nextZoneName(base))?.trim();
     if (!name || !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) return;
     update({
       ...config,
       zones: ensureZones(config.zones, [name]),
-      interactions: config.interactions.map((x, idx) =>
-        idx === i ? { ...x, [field]: name } : x,
+      interactions: config.interactions.map((entry, currentIndex) =>
+        currentIndex === index ? { ...entry, [field]: name } : entry,
       ),
     });
   }
-  function remove(i: number): void {
-    update({ ...config, interactions: config.interactions.filter((_, idx) => idx !== i) });
+
+  function remove(index: number): void {
+    update({ ...config, interactions: config.interactions.filter((_, currentIndex) => currentIndex !== index) });
   }
+
   return (
     <section className="panel">
-      <h2>Interaktive Elemente (Stein ablegen, Kerze, Wasserringe …)</h2>
-      {config.interactions.map((x, i) => {
-        const def = defs.find((d) => d.id === x.interaction);
+      <h2>Interaktive Elemente (Stein ablegen, Kerze, Wasserringe ...)</h2>
+      {config.interactions.map((entry, index) => {
+        const def = defs.find((item) => item.id === entry.interaction);
         return (
-          <div className="item" key={x.id}>
+          <div className="item" key={entry.id}>
             <div className="item-head">
               <div className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={x.enabled}
-                  onChange={(ev) => patch(i, { enabled: ev.target.checked })}
-                />
-                <strong>{x.id}</strong>
-                {def && (
-                  <span className={`badge ${def.source}`}>{def.source}</span>
-                )}
+                <input type="checkbox" checked={entry.enabled} onChange={(event) => patch(index, { enabled: event.target.checked })} />
+                <strong>{entry.id}</strong>
+                {def && <span className={`badge ${def.source}`}>{def.source}</span>}
               </div>
-              <button className="danger" onClick={() => remove(i)}>
-                Entfernen
-              </button>
+              <button className="danger" type="button" onClick={() => remove(index)}>Entfernen</button>
             </div>
             <div className="grid-2">
               <div className="field">
                 <label>Interaktion</label>
-                <select
-                  value={x.interaction}
-                  onChange={(ev) => changeInteraction(i, ev.target.value)}
-                >
-                  {[...new Set([...defs.map((d) => d.id), x.interaction].filter(Boolean))].map(
-                    (id) => (
-                      <option key={id} value={id}>
-                        {defs.find((d) => d.id === id)?.label ?? id}
-                      </option>
-                    ),
-                  )}
+                <select value={entry.interaction} onChange={(event) => changeInteraction(index, event.target.value)}>
+                  {[...new Set([...defs.map((def) => def.id), entry.interaction].filter(Boolean))].map((id) => (
+                    <option key={id} value={id}>
+                      {defs.find((def) => def.id === id)?.label ?? id}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="field">
                 <label>{def?.zoneKind === "drag_release" ? "Ablage-Zone (Drop)" : "Zone"}</label>
                 <div className="row">
-                  <select value={x.zone ?? ""} onChange={(ev) => patch(i, { zone: ev.target.value })}>
-                    <option value="">— keine —</option>
-                    {zoneNames.map((z) => (
-                      <option key={z} value={z}>
-                        {z}
+                  <select value={entry.zone ?? ""} onChange={(event) => patch(index, { zone: event.target.value })}>
+                    <option value="">Ã¢â‚¬â€ keine Ã¢â‚¬â€</option>
+                    {zoneNames.map((zone) => (
+                      <option key={zone} value={zone}>
+                        {zone}
                       </option>
                     ))}
                   </select>
-                  <button type="button" onClick={() => addZoneFor(i, "zone")}>+ Zone</button>
+                  <button type="button" onClick={() => addZoneFor(index, "zone")}>+ Zone</button>
                 </div>
                 {zoneNames.length === 0 && (
-                  <p className="muted">Noch keine Zonen vorhanden. Mit "+ Zone" legst du direkt eine an und weist sie dieser Interaktion zu.</p>
+                  <p className="muted">Noch keine Zonen vorhanden. Mit + Zone legst du direkt eine an und weist sie dieser Interaktion zu.</p>
                 )}
               </div>
               {def?.zoneKind === "drag_release" && (
                 <div className="field">
-                  <label>Quell-Zone (Drag) — wo das Objekt aufgenommen wird</label>
+                  <label>Quell-Zone (Drag)</label>
                   <div className="row">
-                    <select
-                      value={x.sourceZone ?? ""}
-                      onChange={(ev) => patch(i, { sourceZone: ev.target.value })}
-                    >
-                      <option value="">— keine —</option>
-                      {zoneNames.map((z) => (
-                        <option key={z} value={z}>
-                          {z}
+                    <select value={entry.sourceZone ?? ""} onChange={(event) => patch(index, { sourceZone: event.target.value })}>
+                      <option value="">Ã¢â‚¬â€ keine Ã¢â‚¬â€</option>
+                      {zoneNames.map((zone) => (
+                        <option key={zone} value={zone}>
+                          {zone}
                         </option>
                       ))}
                     </select>
-                    <button type="button" onClick={() => addZoneFor(i, "sourceZone")}>+ Zone</button>
+                    <button type="button" onClick={() => addZoneFor(index, "sourceZone")}>+ Zone</button>
                   </div>
                 </div>
               )}
@@ -569,147 +569,97 @@ function InteractionsSection({
           </div>
         );
       })}
-      <button onClick={add}>+ Interaktion</button>
+      <button type="button" onClick={add}>+ Interaktion</button>
     </section>
   );
 }
 
-/* ---------- Präsenzen ---------- */
-function PresenceSection({
-  config,
-  lib,
-  update,
-}: {
-  config: RoomConfig;
-  lib: SilhouettesLibrary | null;
-  update: (c: RoomConfig) => void;
-}): JSX.Element {
-  const sils = lib?.silhouettes ?? [];
-  const p = config.presence;
-  function patch(part: Partial<typeof p>): void {
-    update({ ...config, presence: { ...p, ...part } });
+function PresenceSection({ config, lib, update }: { config: RoomConfig; lib: SilhouettesLibrary | null; update: (config: RoomConfig) => void }): JSX.Element {
+  const silhouettes = lib?.silhouettes ?? [];
+  const presence = config.presence;
+
+  function patch(part: Partial<typeof presence>): void {
+    update({ ...config, presence: { ...presence, ...part } });
   }
-  function patchKind(i: number, kp: Partial<PresenceKindConfig>): void {
-    patch({ kinds: p.kinds.map((k, idx) => (idx === i ? { ...k, ...kp } : k)) });
+
+  function patchKind(index: number, part: Partial<PresenceKindConfig>): void {
+    patch({ kinds: presence.kinds.map((kind, currentIndex) => (currentIndex === index ? { ...kind, ...part } : kind)) });
   }
+
   function addKind(): void {
     patch({
       kinds: [
-        ...p.kinds,
-        { kind: "walking", silhouette: sils[0]?.src ?? "", weight: 0.3, baseHeight: 400 },
+        ...presence.kinds,
+        { kind: "walking", silhouette: silhouettes[0]?.src ?? "", weight: 0.3, baseHeight: 400 },
       ],
     });
   }
-  function removeKind(i: number): void {
-    patch({ kinds: p.kinds.filter((_, idx) => idx !== i) });
+
+  function removeKind(index: number): void {
+    patch({ kinds: presence.kinds.filter((_, currentIndex) => currentIndex !== index) });
   }
+
   return (
     <section className="panel">
-      <h2>Präsenzen / Silhouetten</h2>
+      <h2>PrÃƒÂ¤senzen / Silhouetten</h2>
       <div className="row">
         <div className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={p.enabled}
-            onChange={(e) => patch({ enabled: e.target.checked })}
-          />
+          <input type="checkbox" checked={presence.enabled} onChange={(event) => patch({ enabled: event.target.checked })} />
           <label>aktiv</label>
         </div>
-        <div className="field">
-          <label>Max. Spawns</label>
-          <input
-            type="number"
-            value={p.maxSpawns}
-            onChange={(e) => patch({ maxSpawns: Number(e.target.value) })}
-          />
-        </div>
-        <div className="field">
-          <label>Erste Verzögerung min (ms)</label>
-          <input
-            type="number"
-            value={p.firstDelayMsMin}
-            onChange={(e) => patch({ firstDelayMsMin: Number(e.target.value) })}
-          />
-        </div>
-        <div className="field">
-          <label>max (ms)</label>
-          <input
-            type="number"
-            value={p.firstDelayMsMax}
-            onChange={(e) => patch({ firstDelayMsMax: Number(e.target.value) })}
-          />
-        </div>
-        <div className="field">
-          <label>Max. fremde Spuren</label>
-          <input
-            type="number"
-            value={p.maxForeignTraceArtifacts}
-            onChange={(e) => patch({ maxForeignTraceArtifacts: Number(e.target.value) })}
-          />
-        </div>
+        <NumberInput label="Max. Spawns" value={presence.maxSpawns} onChange={(value) => patch({ maxSpawns: value })} />
+        <NumberInput label="Erste VerzÃƒÂ¶gerung min (ms)" value={presence.firstDelayMsMin} onChange={(value) => patch({ firstDelayMsMin: value })} />
+        <NumberInput label="max (ms)" value={presence.firstDelayMsMax} onChange={(value) => patch({ firstDelayMsMax: value })} />
+        <NumberInput label="Max. fremde Spuren" value={presence.maxForeignTraceArtifacts} onChange={(value) => patch({ maxForeignTraceArtifacts: value })} />
       </div>
       <h3>Arten</h3>
-      {p.kinds.map((k, i) => (
-        <div className="item" key={i}>
+      {presence.kinds.map((kind, index) => (
+        <div className="item" key={`${kind.kind}-${index}`}>
           <div className="grid-2">
             <div className="field">
               <label>Art</label>
-              <input type="text" value={k.kind} onChange={(e) => patchKind(i, { kind: e.target.value })} />
+              <input type="text" value={kind.kind} onChange={(event) => patchKind(index, { kind: event.target.value })} />
             </div>
             <div className="field">
               <label>Silhouette</label>
-              <select value={k.silhouette} onChange={(e) => patchKind(i, { silhouette: e.target.value })}>
-                {[...new Set([...sils.map((s) => s.src), k.silhouette].filter(Boolean))].map((s) => (
-                  <option key={s} value={s}>
-                    {s}
+              <select value={kind.silhouette} onChange={(event) => patchKind(index, { silhouette: event.target.value })}>
+                {[...new Set([...silhouettes.map((entry) => entry.src), kind.silhouette].filter(Boolean))].map((value) => (
+                  <option key={value} value={value}>
+                    {value}
                   </option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label>Gewicht: {k.weight.toFixed(2)}</label>
-              <input
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={k.weight}
-                onChange={(e) => patchKind(i, { weight: Number(e.target.value) })}
-              />
+              <label>Gewicht: {kind.weight.toFixed(2)}</label>
+              <input type="range" min={0} max={1} step={0.01} value={kind.weight} onChange={(event) => patchKind(index, { weight: Number(event.target.value) })} />
             </div>
-            <div className="field">
-              <label>Basishöhe (px)</label>
-              <input
-                type="number"
-                value={k.baseHeight}
-                onChange={(e) => patchKind(i, { baseHeight: Number(e.target.value) })}
-              />
-            </div>
+            <NumberInput label="BasishÃƒÂ¶he (px)" value={kind.baseHeight} onChange={(value) => patchKind(index, { baseHeight: value })} />
           </div>
-          <button className="danger" onClick={() => removeKind(i)}>
-            Art entfernen
-          </button>
+          <button className="danger" type="button" onClick={() => removeKind(index)}>Art entfernen</button>
         </div>
       ))}
-      <button onClick={addKind}>+ Art</button>
+      <button type="button" onClick={addKind}>+ Art</button>
     </section>
   );
 }
 
-/* ---------- Random Events ---------- */
 function RandomEventsSection({
   config,
   update,
+  onGenerate,
 }: {
   config: RoomConfig;
-  update: (c: RoomConfig) => void;
+  update: (config: RoomConfig) => void;
+  onGenerate: (index: number) => void;
 }): JSX.Element {
-  function patch(i: number, p: Partial<RandomEventConfig>): void {
+  function patch(index: number, part: Partial<RandomEventConfig>): void {
     update({
       ...config,
-      randomEvents: config.randomEvents.map((e, idx) => (idx === i ? { ...e, ...p } : e)),
+      randomEvents: config.randomEvents.map((entry, currentIndex) => (currentIndex === index ? { ...entry, ...part } : entry)),
     });
   }
+
   function add(): void {
     update({
       ...config,
@@ -726,185 +676,134 @@ function RandomEventsSection({
       ],
     });
   }
-  function remove(i: number): void {
-    update({ ...config, randomEvents: config.randomEvents.filter((_, idx) => idx !== i) });
+
+  function remove(index: number): void {
+    update({ ...config, randomEvents: config.randomEvents.filter((_, currentIndex) => currentIndex !== index) });
   }
+
   return (
     <section className="panel">
       <h2>Zufallsereignisse</h2>
       {config.randomEvents.length === 0 && <p className="muted">Keine Ereignisse definiert.</p>}
-      {config.randomEvents.map((e, i) => (
-        <div className="item" key={e.id}>
+      {config.randomEvents.map((entry, index) => (
+        <div className="item" key={entry.id}>
           <div className="item-head">
             <div className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={e.enabled}
-                onChange={(ev) => patch(i, { enabled: ev.target.checked })}
-              />
-              <strong>{e.id}</strong>
+              <input type="checkbox" checked={entry.enabled} onChange={(event) => patch(index, { enabled: event.target.checked })} />
+              <strong>{entry.id}</strong>
             </div>
-            <button className="danger" onClick={() => remove(i)}>
-              Entfernen
-            </button>
+            <div className="row">
+              {entry.kind === "sound" && <button type="button" onClick={() => onGenerate(index)}>SFX generieren</button>}
+              <button className="danger" type="button" onClick={() => remove(index)}>Entfernen</button>
+            </div>
           </div>
           <div className="grid-2">
             <div className="field">
               <label>Art</label>
-              <select
-                value={e.kind}
-                onChange={(ev) => patch(i, { kind: ev.target.value as "sound" | "interaction" })}
-              >
+              <select value={entry.kind} onChange={(event) => patch(index, { kind: event.target.value as "sound" | "interaction" })}>
                 <option value="sound">sound</option>
                 <option value="interaction">interaction</option>
               </select>
             </div>
             <div className="field">
               <label>Referenz (Sound-Datei oder Interaktions-ID)</label>
-              <input type="text" value={e.ref} onChange={(ev) => patch(i, { ref: ev.target.value })} />
+              <input type="text" value={entry.ref} onChange={(event) => patch(index, { ref: event.target.value })} />
             </div>
-            <div className="field">
-              <label>Intervall min (ms)</label>
-              <input
-                type="number"
-                value={e.intervalMsMin}
-                onChange={(ev) => patch(i, { intervalMsMin: Number(ev.target.value) })}
-              />
-            </div>
-            <div className="field">
-              <label>Intervall max (ms)</label>
-              <input
-                type="number"
-                value={e.intervalMsMax}
-                onChange={(ev) => patch(i, { intervalMsMax: Number(ev.target.value) })}
-              />
-            </div>
+            <NumberInput label="Intervall min (ms)" value={entry.intervalMsMin} onChange={(value) => patch(index, { intervalMsMin: value })} />
+            <NumberInput label="Intervall max (ms)" value={entry.intervalMsMax} onChange={(value) => patch(index, { intervalMsMax: value })} />
           </div>
         </div>
       ))}
-      <button onClick={add}>+ Ereignis</button>
+      <button type="button" onClick={add}>+ Ereignis</button>
     </section>
   );
 }
 
-/* ---------- Intro & Sprecher ---------- */
 function IntroSpeakerSection({
   config,
   assets,
   update,
   onUpload,
+  onGenerateIntro,
+  onGenerateSpeaker,
 }: {
   config: RoomConfig;
   assets: AssetListing | null;
-  update: (c: RoomConfig) => void;
-  onUpload: (f: File) => void;
+  update: (config: RoomConfig) => void;
+  onUpload: (file: File) => void;
+  onGenerateIntro: () => void;
+  onGenerateSpeaker: () => void;
 }): JSX.Element {
-  const audioOpts = assets?.audio ?? [];
+  const audioOptions = assets?.audio ?? [];
   return (
     <section className="panel">
       <h2>Intro &amp; Sprecher</h2>
       <h3>Ankunfts-Intro</h3>
       <div className="grid-2">
         <div className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={config.intro.enabled}
-            onChange={(e) => update({ ...config, intro: { ...config.intro, enabled: e.target.checked } })}
-          />
+          <input type="checkbox" checked={config.intro.enabled} onChange={(event) => update({ ...config, intro: { ...config.intro, enabled: event.target.checked } })} />
           <label>aktiv</label>
         </div>
         <div className="field">
-          <label>Intro-Sound (mp3)</label>
-          <select
-            value={config.intro.audio ?? ""}
-            onChange={(e) => update({ ...config, intro: { ...config.intro, audio: e.target.value } })}
-          >
-            <option value="">— keiner —</option>
-            {[...new Set([...audioOpts, config.intro.audio].filter(Boolean))].map((s) => (
-              <option key={s} value={s as string}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <label>Intro-Sound</label>
+          <div className="row">
+            <select value={config.intro.audio ?? ""} onChange={(event) => update({ ...config, intro: { ...config.intro, audio: event.target.value } })}>
+              <option value="">Ã¢â‚¬â€ keiner Ã¢â‚¬â€</option>
+              {[...new Set([...audioOptions, config.intro.audio].filter(Boolean))].map((value) => (
+                <option key={value} value={value as string}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={onGenerateIntro}>TTS generieren</button>
+          </div>
         </div>
-        <div className="field">
-          <label>Dauer (ms)</label>
-          <input
-            type="number"
-            value={config.intro.durationMs}
-            onChange={(e) =>
-              update({ ...config, intro: { ...config.intro, durationMs: Number(e.target.value) } })
-            }
-          />
-        </div>
+        <NumberInput label="Dauer (ms)" value={config.intro.durationMs} onChange={(value) => update({ ...config, intro: { ...config.intro, durationMs: value } })} />
       </div>
       <div className="field">
         <label>Intro-Text (eine Zeile pro Absatz)</label>
-        <textarea
-          value={config.intro.lines.join("\n")}
-          onChange={(e) =>
-            update({ ...config, intro: { ...config.intro, lines: e.target.value.split("\n") } })
-          }
-        />
+        <textarea value={config.intro.lines.join("\n")} onChange={(event) => update({ ...config, intro: { ...config.intro, lines: event.target.value.split("\n") } })} />
       </div>
 
       <h3>Sprecher</h3>
       <div className="grid-2">
         <div className="checkbox-row">
-          <input
-            type="checkbox"
-            checked={config.speaker.enabled}
-            onChange={(e) =>
-              update({ ...config, speaker: { ...config.speaker, enabled: e.target.checked } })
-            }
-          />
+          <input type="checkbox" checked={config.speaker.enabled} onChange={(event) => update({ ...config, speaker: { ...config.speaker, enabled: event.target.checked } })} />
           <label>aktiv</label>
         </div>
         <div className="field">
-          <label>Sprecher-Audio (mp3)</label>
-          <select
-            value={config.speaker.audio ?? ""}
-            onChange={(e) =>
-              update({ ...config, speaker: { ...config.speaker, audio: e.target.value } })
-            }
-          >
-            <option value="">— keiner —</option>
-            {[...new Set([...audioOpts, config.speaker.audio].filter(Boolean))].map((s) => (
-              <option key={s} value={s as string}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <label>Sprecher-Audio</label>
+          <div className="row">
+            <select value={config.speaker.audio ?? ""} onChange={(event) => update({ ...config, speaker: { ...config.speaker, audio: event.target.value } })}>
+              <option value="">Ã¢â‚¬â€ keiner Ã¢â‚¬â€</option>
+              {[...new Set([...audioOptions, config.speaker.audio].filter(Boolean))].map((value) => (
+                <option key={value} value={value as string}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <button type="button" onClick={onGenerateSpeaker}>TTS generieren</button>
+          </div>
         </div>
         <div className="field">
           <label>Begleittext (.md-Pfad oder Markdown)</label>
-          <input
-            type="text"
-            value={config.speaker.text ?? ""}
-            onChange={(e) =>
-              update({ ...config, speaker: { ...config.speaker, text: e.target.value } })
-            }
-          />
+          <input type="text" value={config.speaker.text ?? ""} onChange={(event) => update({ ...config, speaker: { ...config.speaker, text: event.target.value } })} />
         </div>
-        <div className="field">
-          <label>Fallback-Dauer (ms)</label>
-          <input
-            type="number"
-            value={config.speaker.fallbackMs}
-            onChange={(e) =>
-              update({ ...config, speaker: { ...config.speaker, fallbackMs: Number(e.target.value) } })
-            }
-          />
-        </div>
+        <NumberInput label="Fallback-Dauer (ms)" value={config.speaker.fallbackMs} onChange={(value) => update({ ...config, speaker: { ...config.speaker, fallbackMs: value } })} />
       </div>
       <div className="row">
         <label className="muted">Audio hochladen:</label>
-        <input
-          type="file"
-          accept="audio/*"
-          onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])}
-        />
+        <input type="file" accept="audio/*" onChange={(event) => event.target.files?.[0] && onUpload(event.target.files[0])} />
       </div>
     </section>
+  );
+}
+
+function NumberInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }): JSX.Element {
+  return (
+    <div className="field">
+      <label>{label}</label>
+      <input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} />
+    </div>
   );
 }

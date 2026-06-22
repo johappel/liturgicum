@@ -6,11 +6,6 @@ import type {
   SilhouettesLibrary,
 } from "../config/libraryTypes";
 
-/**
- * Schmaler API-Client fÃƒÂ¼r den lokalen Dev-Konfigurationsserver
- * (siehe app/vite-plugin-config-server.ts). Nur in der Entwicklung verfÃƒÂ¼gbar.
- */
-
 async function jsonOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
@@ -33,6 +28,7 @@ export interface AssetListing {
 }
 
 export type ServiceKey = "sfx" | "tts";
+export type GeneratedKind = "sfx" | "tts";
 
 export interface ServiceStatus {
   service: ServiceKey;
@@ -49,6 +45,39 @@ export interface ServicesStatus {
   tts: ServiceStatus;
 }
 
+export interface GeneratedEntry {
+  id: string;
+  kind: GeneratedKind;
+  createdAt: string;
+  requestHash: string;
+  title: string;
+  source: "moss-sfx" | "openmoss";
+  poolFile: string;
+  mimeType: string;
+  request: Record<string, unknown>;
+  translatedPrompt?: string;
+}
+
+export interface GenerateSfxPayload {
+  mode: "raw" | "scene";
+  prompt?: string;
+  scene?: string;
+  seconds: number;
+  numInferenceSteps: number;
+  cfgScale: number;
+  seed: number;
+  format: "wav" | "ogg";
+  force?: boolean;
+}
+
+export interface GenerateTtsPayload {
+  text: string;
+  language: string;
+  instruction?: string;
+  seed?: number;
+  force?: boolean;
+}
+
 export const api = {
   async listRooms(): Promise<string[]> {
     const data = await jsonOrThrow<{ rooms: string[] }>(await fetch("/api/rooms"));
@@ -56,13 +85,13 @@ export const api = {
   },
 
   async getServicesStatus(): Promise<ServicesStatus> {
-    const data = await jsonOrThrow<{ services: ServicesStatus }>(await fetch(`/api/services/status`));
+    const data = await jsonOrThrow<{ services: ServicesStatus }>(await fetch("/api/services/status"));
     return data.services;
   },
 
   async startService(service: ServiceKey): Promise<{ ok: boolean; service: ServiceKey; pid?: number }> {
     return jsonOrThrow<{ ok: boolean; service: ServiceKey; pid?: number }>(
-      await fetch(`/api/services/start`, {
+      await fetch("/api/services/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ service }),
@@ -113,6 +142,44 @@ export const api = {
     );
   },
 
+  async generateSfx(roomId: string, payload: GenerateSfxPayload): Promise<{ ok: boolean; reused: boolean; entry: GeneratedEntry }> {
+    return jsonOrThrow<{ ok: boolean; reused: boolean; entry: GeneratedEntry }>(
+      await fetch(`/api/rooms/${encodeURIComponent(roomId)}/generate/sfx`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
+  },
+
+  async generateTts(roomId: string, payload: GenerateTtsPayload): Promise<{ ok: boolean; reused: boolean; entry: GeneratedEntry }> {
+    return jsonOrThrow<{ ok: boolean; reused: boolean; entry: GeneratedEntry }>(
+      await fetch(`/api/rooms/${encodeURIComponent(roomId)}/generate/tts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }),
+    );
+  },
+
+  async listGenerated(kind?: GeneratedKind): Promise<GeneratedEntry[]> {
+    const suffix = kind ? `?kind=${encodeURIComponent(kind)}` : "";
+    const data = await jsonOrThrow<{ items: GeneratedEntry[] }>(await fetch(`/api/generated${suffix}`));
+    return data.items;
+  },
+
+  generatedFileUrl(id: string): string {
+    return `/api/generated/${encodeURIComponent(id)}/file`;
+  },
+
+  async assignGenerated(roomId: string, generatedId: string): Promise<{ ok: boolean; path: string; entry: GeneratedEntry }> {
+    return jsonOrThrow<{ ok: boolean; path: string; entry: GeneratedEntry }>(
+      await fetch(`/api/rooms/${encodeURIComponent(roomId)}/generated/${encodeURIComponent(generatedId)}/assign`, {
+        method: "POST",
+      }),
+    );
+  },
+
   async getEffects(): Promise<EffectsLibrary> {
     return jsonOrThrow<EffectsLibrary>(await fetch("/api/library/effects"));
   },
@@ -155,7 +222,6 @@ export const api = {
   },
 };
 
-/** Liest eine Datei als base64-DataURL fÃƒÂ¼r den Upload. */
 export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
