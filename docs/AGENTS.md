@@ -1,4 +1,3 @@
-# AGENTS.md
 ## Spezifikation, Regeln und Arbeitsweise für menschliche und KI-gestützte Beiträge
 
 Dieses Dokument beschreibt, wie an diesem Projekt gearbeitet werden soll.

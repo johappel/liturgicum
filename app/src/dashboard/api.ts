@@ -7,8 +7,8 @@ import type {
 } from "../config/libraryTypes";
 
 /**
- * Schmaler API-Client für den lokalen Dev-Konfigurationsserver
- * (siehe app/vite-plugin-config-server.ts). Nur in der Entwicklung verfügbar.
+ * Schmaler API-Client fÃƒÂ¼r den lokalen Dev-Konfigurationsserver
+ * (siehe app/vite-plugin-config-server.ts). Nur in der Entwicklung verfÃƒÂ¼gbar.
  */
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -32,10 +32,42 @@ export interface AssetListing {
   anchors: string[];
 }
 
+export type ServiceKey = "sfx" | "tts";
+
+export interface ServiceStatus {
+  service: ServiceKey;
+  label: string;
+  state: "up" | "down" | "loading";
+  detail: string;
+  url: string;
+  dir: string;
+  startedAt: string | null;
+}
+
+export interface ServicesStatus {
+  sfx: ServiceStatus;
+  tts: ServiceStatus;
+}
+
 export const api = {
   async listRooms(): Promise<string[]> {
     const data = await jsonOrThrow<{ rooms: string[] }>(await fetch("/api/rooms"));
     return data.rooms;
+  },
+
+  async getServicesStatus(): Promise<ServicesStatus> {
+    const data = await jsonOrThrow<{ services: ServicesStatus }>(await fetch(`/api/services/status`));
+    return data.services;
+  },
+
+  async startService(service: ServiceKey): Promise<{ ok: boolean; service: ServiceKey; pid?: number }> {
+    return jsonOrThrow<{ ok: boolean; service: ServiceKey; pid?: number }>(
+      await fetch(`/api/services/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ service }),
+      }),
+    );
   },
 
   async createRoom(id: string, title: string): Promise<{ id: string }> {
@@ -123,7 +155,7 @@ export const api = {
   },
 };
 
-/** Liest eine Datei als base64-DataURL für den Upload. */
+/** Liest eine Datei als base64-DataURL fÃƒÂ¼r den Upload. */
 export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
