@@ -12,8 +12,35 @@ venv/
 # Node / Frontend (kommt in Phase 2)
 node_modules/
 app/dist/
+app/node_modules/
 app/.vite/
 *.tsbuildinfo
+*.map
+
+# Medien
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.svg
+*.bmp
+*.ico
+*.mp3
+*.wav
+*.ogg
+*.flac
+*.m4a
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Allgemeine Build-Artefakte
+dist/
+build/
+out/
+coverage/
 
 # OS / Editor
 .DS_Store
@@ -22,3 +49,4 @@ Thumbs.db
 
 # Graphify Output (per Lauf neu erzeugt)
 graphify-out/cache/
+graphify-out/
