@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "tts_1782136022485_y4in40",
+      "kind": "tts",
+      "createdAt": "2026-06-22T13:47:02.488Z",
+      "requestHash": "29c8803dcf449464403ad431a19638640521688de80cf60d7e99c548076f53f1",
+      "title": "Willkommen. Du musst hier nichts leisten. Nichts beantworten. Nichts ve...",
+      "source": "openmoss",
+      "poolFile": "tts_1782136022485_y4in40-willkommen-du-musst-hier-nichts-leisten-nichts-b.wav",
+      "mimeType": "audio/wav",
+      "request": {
+        "text": "Willkommen.\n\nDu musst hier nichts leisten.\n\nNichts beantworten.\n\nNichts verstehen.\n\nVielleicht genügt es für einen Moment, da zu sein.\n\nDieser Raum lädt nicht zum Reden ein.\n\nSondern zum Hören.\n\nNicht nur mit den Ohren.\n\nAuch mit deiner Aufmerksamkeit.\n\nVielleicht bemerkst du zuerst die Geräusche.\n\nDen Nachhall.\n\nDie Stille zwischen den Klängen.\n\nVielleicht bemerkst du später etwas anderes.\n\nEinen Gedanken.\n\nEine Erinnerung.\n\nEine Frage.\n\nOder einfach die Gegenwart dieses Augenblicks.\n\nIn der Mitte des Raumes liegt ein stilles Zentrum.\n\nDu musst ihm nicht folgen.\n\nAber du darfst dich von ihm sammeln lassen.\n\nNimm wahr, was kommt.\n\nUnd was bleibt.\n\nManches spricht laut.\n\nManches nur im Nachklang.\n\nBleibe noch einen Moment.\n\nUnd höre.",
+        "language": "de",
+        "instruction": "in priesterlichem Tonfall erklärt sie den Raum",
+        "seed": 142724
+      }
+    },
+    {
+      "id": "tts_1782134305651_tzpq0l",
+      "kind": "tts",
+      "createdAt": "2026-06-22T13:18:25.659Z",
+      "requestHash": "da3d5843006bb968f6c80fe3b77fb026e8b210a67e33f8c9b6176809ba090b3a",
+      "title": "Willkommen. Du musst hier nichts leisten. Nichts beantworten. Nichts ve...",
+      "source": "openmoss",
+      "poolFile": "tts_1782134305651_tzpq0l-willkommen-du-musst-hier-nichts-leisten-nichts-b.wav",
+      "mimeType": "audio/wav",
+      "request": {
+        "text": "Willkommen.\n\nDu musst hier nichts leisten.\n\nNichts beantworten.\n\nNichts verstehen.\n\nVielleicht genügt es für einen Moment, da zu sein.\n\nDieser Raum lädt nicht zum Reden ein.\n\nSondern zum Hören.\n\nNicht nur mit den Ohren.\n\nAuch mit deiner Aufmerksamkeit.\n\nVielleicht bemerkst du zuerst die Geräusche.\n\nDen Nachhall.\n\nDie Stille zwischen den Klängen.\n\nVielleicht bemerkst du später etwas anderes.\n\nEinen Gedanken.\n\nEine Erinnerung.\n\nEine Frage.\n\nOder einfach die Gegenwart dieses Augenblicks.\n\nIn der Mitte des Raumes liegt ein stilles Zentrum.\n\nDu musst ihm nicht folgen.\n\nAber du darfst dich von ihm sammeln lassen.\n\nNimm wahr, was kommt.\n\nUnd was bleibt.\n\nManches spricht laut.\n\nManches nur im Nachklang.\n\nBleibe noch einen Moment.\n\nUnd höre.",
+        "language": "de",
+        "instruction": "vorgelesen einem priesterlichen Tonfall",
+        "seed": 679257
+      }
+    }
+  ]
+}

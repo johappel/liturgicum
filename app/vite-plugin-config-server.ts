@@ -433,6 +433,159 @@ async function updateMeta(roomId: string, relKey: string, source: string): Promi
   await fs.writeFile(metaPath, JSON.stringify(meta, null, 2) + "\n", "utf-8");
 }
 
+// ---- TTS chunking: keep each /tts call under MOSS-TTS ~15s clean range ----
+function splitIntoChunks(text: string, maxWords: number): string[] {
+  const clean = String(text).replace(/\s+/g, " ").trim();
+  if (!clean) return [];
+  const words = clean.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length <= maxWords) return [words.join(" ")];
+  const minChunkWords = Math.max(1, Math.floor(maxWords * 0.5));
+  const findBestSplit = (start: number, maxEnd: number): number => {
+    for (let j = maxEnd; j > start; j--) {
+      if (/[.!?]["')\]]?$/.test(words[j - 1])) return j;
+    }
+    const clauseLimit = Math.max(start + 1, maxEnd - Math.floor(maxWords * 0.25));
+    for (let j = maxEnd; j >= clauseLimit; j--) {
+      if (/[,;:]["')\]]?$/.test(words[j - 1])) return j;
+    }
+    return maxEnd;
+  };
+  const chunks: string[] = [];
+  let i = 0;
+  while (i < words.length) {
+    const remaining = words.length - i;
+    if (remaining <= maxWords) {
+      chunks.push(words.slice(i).join(" "));
+      break;
+    }
+    let split = findBestSplit(i, i + maxWords);
+    if (split - i < minChunkWords) split = Math.min(words.length, i + maxWords);
+    if (split - i > maxWords + 3) split = i + maxWords;
+    chunks.push(words.slice(i, split).join(" "));
+    i = split;
+  }
+  const cleaned: string[] = [];
+  for (const c of chunks) {
+    if (cleaned.length && c.split(/\s+/).length <= 2) cleaned[cleaned.length - 1] += " " + c;
+    else cleaned.push(c);
+  }
+  return cleaned;
+}
+
+interface WavHeader {
+  audioFormat: number;
+  numChannels: number;
+  sampleRate: number;
+  byteRate: number;
+  blockAlign: number;
+  bitsPerSample: number;
+  dataOffset: number;
+  dataSize: number;
+}
+
+function parseWavHeader(bytes: Buffer): WavHeader {
+  if (bytes.length < 12) throw new Error("WAV: too small");
+  if (bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE") {
+    throw new Error("WAV: bad magic");
+  }
+  let offset = 12;
+  let fmt: Omit<WavHeader, "dataOffset" | "dataSize"> | null = null;
+  let data: { offset: number; size: number } | null = null;
+  while (offset + 8 <= bytes.length) {
+    const id = bytes.toString("ascii", offset, offset + 4);
+    const size = bytes.readUInt32LE(offset + 4);
+    const payload = offset + 8;
+    if (id === "fmt " && !fmt && payload + 16 <= bytes.length) {
+      fmt = {
+        audioFormat: bytes.readUInt16LE(payload + 0),
+        numChannels: bytes.readUInt16LE(payload + 2),
+        sampleRate: bytes.readUInt32LE(payload + 4),
+        byteRate: bytes.readUInt32LE(payload + 8),
+        blockAlign: bytes.readUInt16LE(payload + 12),
+        bitsPerSample: bytes.readUInt16LE(payload + 14),
+      };
+    } else if (id === "data" && !data) {
+      data = { offset: payload, size };
+    }
+    offset = payload + size + (size & 1);
+  }
+  if (!fmt || !data) throw new Error("WAV: missing fmt or data");
+  return { ...fmt, dataOffset: data.offset, dataSize: data.size };
+}
+
+function buildWav(header: WavHeader, pcm: Buffer): Buffer {
+  const out = Buffer.alloc(44 + pcm.length);
+  out.write("RIFF", 0, "ascii");
+  out.writeUInt32LE(36 + pcm.length, 4);
+  out.write("WAVE", 8, "ascii");
+  out.write("fmt ", 12, "ascii");
+  out.writeUInt32LE(16, 16);
+  out.writeUInt16LE(header.audioFormat, 20);
+  out.writeUInt16LE(header.numChannels, 22);
+  out.writeUInt32LE(header.sampleRate, 24);
+  out.writeUInt32LE(header.byteRate, 28);
+  out.writeUInt16LE(header.blockAlign, 32);
+  out.writeUInt16LE(header.bitsPerSample, 34);
+  out.write("data", 36, "ascii");
+  out.writeUInt32LE(pcm.length, 40);
+  pcm.copy(out, 44);
+  return out;
+}
+
+function concatWav(buffers: Buffer[]): Buffer {
+  if (buffers.length === 1) return buffers[0];
+  const headers = buffers.map(parseWavHeader);
+  const pcmParts = buffers.map((b, i) =>
+    b.subarray(headers[i].dataOffset, headers[i].dataOffset + headers[i].dataSize),
+  );
+  return buildWav(headers[0], Buffer.concat(pcmParts));
+}
+
+function isValidWav(bytes: Buffer): boolean {
+  return (
+    bytes.length >= 12 &&
+    bytes.toString("ascii", 0, 4) === "RIFF" &&
+    bytes.toString("ascii", 8, 12) === "WAVE"
+  );
+}
+
+const TTS_MAX_WORDS = 22;
+
+async function generateTtsAudio(request: {
+  text: string;
+  language: string;
+  instruction: string;
+  seed?: number;
+}): Promise<{ buffer: Buffer; mimeType: string; chunks: number }> {
+  const chunks = splitIntoChunks(request.text, TTS_MAX_WORDS);
+  if (chunks.length <= 1) {
+    const body: Record<string, unknown> = {
+      text: request.text,
+      language: request.language,
+      ...(request.instruction ? { instruction: request.instruction } : {}),
+      ...(request.seed !== undefined ? { sampling: { seed: request.seed } } : {}),
+    };
+    const { buffer, response } = await proxyBinary(`${OPENMOSS_URL}/tts`, body);
+    return { buffer, mimeType: response.headers.get("content-type") || "audio/wav", chunks: 1 };
+  }
+  const wavs: Buffer[] = [];
+  let bootstrapRef: string | null = null;
+  for (let i = 0; i < chunks.length; i++) {
+    const sampling: Record<string, unknown> = { seed: request.seed !== undefined ? request.seed : 42 };
+    const body: Record<string, unknown> = {
+      text: chunks[i],
+      language: request.language,
+      ...(request.instruction ? { instruction: request.instruction } : {}),
+      sampling,
+    };
+    if (i > 0 && bootstrapRef) body.reference_wav_b64 = bootstrapRef;
+    const { buffer } = await proxyBinary(`${OPENMOSS_URL}/tts`, body);
+    if (!isValidWav(buffer)) throw new Error(`tts chunk ${i + 1}/${chunks.length} returned invalid WAV`);
+    wavs.push(buffer);
+    if (i === 0) bootstrapRef = buffer.toString("base64");
+  }
+  return { buffer: concatWav(wavs), mimeType: "audio/wav", chunks: chunks.length };
+}
 interface Route {
   method: string;
   pattern: RegExp;
@@ -627,13 +780,7 @@ const routes: Route[] = [
       if (existing) return sendJson(res, 200, { ok: true, reused: true, entry: existing });
 
       try {
-        const upstreamBody = {
-          text: request.text,
-          language: request.language,
-          ...(request.instruction ? { instruction: request.instruction } : {}),
-          ...(request.seed !== undefined ? { sampling: { seed: request.seed } } : {}),
-        };
-        const { buffer, response } = await proxyBinary(`${OPENMOSS_URL}/tts`, upstreamBody);
+        const { buffer, mimeType } = await generateTtsAudio(request);
         const entry = await storeGeneratedEntry({
           kind: "tts",
           source: "openmoss",
@@ -641,7 +788,7 @@ const routes: Route[] = [
           requestHash,
           request: request as unknown as Record<string, unknown>,
           buffer,
-          mimeType: response.headers.get("content-type") || "audio/wav",
+          mimeType,
         });
         sendJson(res, 200, { ok: true, reused: false, entry });
       } catch (error) {

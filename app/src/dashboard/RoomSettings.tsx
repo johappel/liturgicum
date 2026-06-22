@@ -20,7 +20,8 @@ type AudioTarget =
   | { kind: "ambient"; index: number }
   | { kind: "event"; index: number }
   | { kind: "intro" }
-  | { kind: "speaker" };
+  | { kind: "speaker" }
+  | { kind: "ambient-new" };
 
 export function RoomSettings(): JSX.Element {
   const [rooms, setRooms] = useState<string[]>([]);
@@ -88,7 +89,7 @@ export function RoomSettings(): JSX.Element {
     try {
       await api.saveRoomConfig(config.id, config);
       setDirty(false);
-      setStatus({ kind: "ok", msg: `Gespeichert Ã¢â€ â€™ rooms/${config.id}/room.config.json` });
+      setStatus({ kind: "ok", msg: `Gespeichert → rooms/${config.id}/room.config.json` });
     } catch (error) {
       setStatus({ kind: "err", msg: String(error) });
     }
@@ -98,7 +99,7 @@ export function RoomSettings(): JSX.Element {
     const id = prompt("ID des neuen Raums (a-z, 0-9, _-):")?.trim();
     if (!id) return;
     if (!/^[a-z0-9][a-z0-9_-]*$/i.test(id)) {
-      setStatus({ kind: "err", msg: "UngÃƒÂ¼ltige Raum-ID." });
+      setStatus({ kind: "err", msg: "Ungültige Raum-ID." });
       return;
     }
     const title = prompt("Anzeigename des Raums:")?.trim() || id;
@@ -107,7 +108,7 @@ export function RoomSettings(): JSX.Element {
       const list = await api.listRooms();
       setRooms(list);
       setRoomId(id);
-      setStatus({ kind: "ok", msg: `Raum angelegt Ã¢â€ â€™ rooms/${id}/room.config.json` });
+      setStatus({ kind: "ok", msg: `Raum angelegt → rooms/${id}/room.config.json` });
     } catch (error) {
       setStatus({ kind: "err", msg: String(error) });
     }
@@ -146,7 +147,15 @@ export function RoomSettings(): JSX.Element {
     if (!config || !audioModal) return;
     const target = audioModal.target;
     let next = config;
-    if (target.kind === "ambient") {
+    if (target.kind === "ambient-new") {
+      next = {
+        ...config,
+        ambient: [
+          ...config.ambient,
+          { id: "ambient_" + (config.ambient.length + 1), src: path, volume: 0.4, loop: true, fadeMs: 4000 },
+        ],
+      };
+    } else if (target.kind === "ambient") {
       next = {
         ...config,
         ambient: config.ambient.map((entry, index) =>
@@ -195,9 +204,9 @@ export function RoomSettings(): JSX.Element {
           Neu laden
         </button>
         <button onClick={() => void createRoom()}>+ Neuer Raum</button>
-        {dirty && <span className="status dirty">Ã¢â€”Â ungespeichert</span>}
+        {dirty && <span className="status dirty">● ungespeichert</span>}
         {status.kind === "ok" && <span className="status ok">{status.msg}</span>}
-        {status.kind === "err" && <span className="status err">Ã¢Å¡Â  {status.msg}</span>}
+        {status.kind === "err" && <span className="status err">⚠ {status.msg}</span>}
       </div>
 
       {!config ? (
@@ -225,7 +234,7 @@ export function RoomSettings(): JSX.Element {
             </div>
           </section>
 
-          <AmbientSection config={config} assets={assets} update={update} onUpload={uploadAudio} onGenerate={(index) => openAudioModal("sfx", { kind: "ambient", index })} />
+          <AmbientSection config={config} assets={assets} update={update} onUpload={uploadAudio} onGenerate={(index) => openAudioModal("sfx", { kind: "ambient", index })} onGenerateNew={() => openAudioModal("sfx", { kind: "ambient-new" })} />
           <EffectsSection config={config} lib={effectsLib} update={update} />
           <InteractionsSection config={config} lib={interactionsLib} update={update} />
 
@@ -296,12 +305,14 @@ function AmbientSection({
   update,
   onUpload,
   onGenerate,
+  onGenerateNew,
 }: {
   config: RoomConfig;
   assets: AssetListing | null;
   update: (config: RoomConfig) => void;
   onUpload: (file: File) => void;
   onGenerate: (index: number) => void;
+  onGenerateNew: () => void;
 }): JSX.Element {
   function patch(index: number, part: Partial<AudioLayerConfig>): void {
     update({
@@ -327,7 +338,7 @@ function AmbientSection({
   const audioOptions = assets?.audio ?? [];
   return (
     <section className="panel">
-      <h2>Ambiente-KlÃƒÂ¤nge (low drone, people noise, church noise, Orgel ...)</h2>
+      <h2>Ambiente-Klänge (low drone, people noise, church noise, Orgel ...)</h2>
       {config.ambient.map((entry, index) => (
         <div className="item" key={entry.id}>
           <div className="item-head">
@@ -345,7 +356,7 @@ function AmbientSection({
             <div className="field">
               <label>Audio-Datei</label>
               <select value={entry.src} onChange={(event) => patch(index, { src: event.target.value })}>
-                <option value="">Ã¢â‚¬â€ wÃƒÂ¤hlen Ã¢â‚¬â€</option>
+                <option value="">— wählen —</option>
                 {[...new Set([...audioOptions, entry.src].filter(Boolean))].map((value) => (
                   <option key={value} value={value}>
                     {value}
@@ -354,7 +365,7 @@ function AmbientSection({
               </select>
             </div>
             <div className="field">
-              <label>LautstÃƒÂ¤rke: {entry.volume.toFixed(2)}</label>
+              <label>Lautstärke: {entry.volume.toFixed(2)}</label>
               <input type="range" min={0} max={1} step={0.01} value={entry.volume} onChange={(event) => patch(index, { volume: Number(event.target.value) })} />
             </div>
             <div className="field">
@@ -366,6 +377,7 @@ function AmbientSection({
       ))}
       <div className="row">
         <button type="button" onClick={add}>+ Ambient-Ebene</button>
+        <button type="button" onClick={onGenerateNew}>SFX generieren</button>
         <label className="muted">Audio hochladen:</label>
         <input type="file" accept="audio/*" onChange={(event) => event.target.files?.[0] && onUpload(event.target.files[0])} />
       </div>
@@ -393,7 +405,7 @@ function EffectsSection({ config, lib, update }: { config: RoomConfig; lib: Effe
   }
   return (
     <section className="panel">
-      <h2>Visuelle Effekt-Loops (Federn, BlÃƒÂ¤tter, Lichter, Nebel, Regen ...)</h2>
+      <h2>Visuelle Effekt-Loops (Federn, Blätter, Lichter, Nebel, Regen ...)</h2>
       {config.effects.map((entry, index) => (
         <div className="item" key={entry.id}>
           <div className="item-head">
@@ -415,7 +427,7 @@ function EffectsSection({ config, lib, update }: { config: RoomConfig; lib: Effe
               </select>
             </div>
             <div className="field">
-              <label>IntensitÃƒÂ¤t: {entry.intensity.toFixed(2)}</label>
+              <label>Intensität: {entry.intensity.toFixed(2)}</label>
               <input type="range" min={0} max={1} step={0.01} value={entry.intensity} onChange={(event) => patch(index, { intensity: Number(event.target.value) })} />
             </div>
           </div>
@@ -535,7 +547,7 @@ function InteractionsSection({ config, lib, update }: { config: RoomConfig; lib:
                 <label>{def?.zoneKind === "drag_release" ? "Ablage-Zone (Drop)" : "Zone"}</label>
                 <div className="row">
                   <select value={entry.zone ?? ""} onChange={(event) => patch(index, { zone: event.target.value })}>
-                    <option value="">Ã¢â‚¬â€ keine Ã¢â‚¬â€</option>
+                    <option value="">— keine —</option>
                     {zoneNames.map((zone) => (
                       <option key={zone} value={zone}>
                         {zone}
@@ -553,7 +565,7 @@ function InteractionsSection({ config, lib, update }: { config: RoomConfig; lib:
                   <label>Quell-Zone (Drag)</label>
                   <div className="row">
                     <select value={entry.sourceZone ?? ""} onChange={(event) => patch(index, { sourceZone: event.target.value })}>
-                      <option value="">Ã¢â‚¬â€ keine Ã¢â‚¬â€</option>
+                      <option value="">— keine —</option>
                       {zoneNames.map((zone) => (
                         <option key={zone} value={zone}>
                           {zone}
@@ -601,14 +613,14 @@ function PresenceSection({ config, lib, update }: { config: RoomConfig; lib: Sil
 
   return (
     <section className="panel">
-      <h2>PrÃƒÂ¤senzen / Silhouetten</h2>
+      <h2>Präsenzen / Silhouetten</h2>
       <div className="row">
         <div className="checkbox-row">
           <input type="checkbox" checked={presence.enabled} onChange={(event) => patch({ enabled: event.target.checked })} />
           <label>aktiv</label>
         </div>
         <NumberInput label="Max. Spawns" value={presence.maxSpawns} onChange={(value) => patch({ maxSpawns: value })} />
-        <NumberInput label="Erste VerzÃƒÂ¶gerung min (ms)" value={presence.firstDelayMsMin} onChange={(value) => patch({ firstDelayMsMin: value })} />
+        <NumberInput label="Erste Verzögerung min (ms)" value={presence.firstDelayMsMin} onChange={(value) => patch({ firstDelayMsMin: value })} />
         <NumberInput label="max (ms)" value={presence.firstDelayMsMax} onChange={(value) => patch({ firstDelayMsMax: value })} />
         <NumberInput label="Max. fremde Spuren" value={presence.maxForeignTraceArtifacts} onChange={(value) => patch({ maxForeignTraceArtifacts: value })} />
       </div>
@@ -634,7 +646,7 @@ function PresenceSection({ config, lib, update }: { config: RoomConfig; lib: Sil
               <label>Gewicht: {kind.weight.toFixed(2)}</label>
               <input type="range" min={0} max={1} step={0.01} value={kind.weight} onChange={(event) => patchKind(index, { weight: Number(event.target.value) })} />
             </div>
-            <NumberInput label="BasishÃƒÂ¶he (px)" value={kind.baseHeight} onChange={(value) => patchKind(index, { baseHeight: value })} />
+            <NumberInput label="Basishöhe (px)" value={kind.baseHeight} onChange={(value) => patchKind(index, { baseHeight: value })} />
           </div>
           <button className="danger" type="button" onClick={() => removeKind(index)}>Art entfernen</button>
         </div>
@@ -748,7 +760,7 @@ function IntroSpeakerSection({
           <label>Intro-Sound</label>
           <div className="row">
             <select value={config.intro.audio ?? ""} onChange={(event) => update({ ...config, intro: { ...config.intro, audio: event.target.value } })}>
-              <option value="">Ã¢â‚¬â€ keiner Ã¢â‚¬â€</option>
+              <option value="">— keiner —</option>
               {[...new Set([...audioOptions, config.intro.audio].filter(Boolean))].map((value) => (
                 <option key={value} value={value as string}>
                   {value}
@@ -775,7 +787,7 @@ function IntroSpeakerSection({
           <label>Sprecher-Audio</label>
           <div className="row">
             <select value={config.speaker.audio ?? ""} onChange={(event) => update({ ...config, speaker: { ...config.speaker, audio: event.target.value } })}>
-              <option value="">Ã¢â‚¬â€ keiner Ã¢â‚¬â€</option>
+              <option value="">— keiner —</option>
               {[...new Set([...audioOptions, config.speaker.audio].filter(Boolean))].map((value) => (
                 <option key={value} value={value as string}>
                   {value}
